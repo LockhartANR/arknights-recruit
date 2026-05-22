@@ -11,27 +11,44 @@ cd server && node index.js
 # Start frontend dev server (Vite, port 5173, proxies /api → :3000)
 cd client && npm run dev
 
-# Production build
-cd client && npx vite build
-# Then serve: cd server && node index.js (Express serves client/dist/)
+# Production build + serve
+cd client && npx vite build && cd ../server && node index.js
+
+# Backend API tests (vitest + supertest, 33 cases)
+cd server && npm test
+
+# Frontend E2E tests (Playwright, 21 cases)
+cd client && npm run test:e2e
 ```
 
 ## Architecture
 
-Full-stack app: Vue 3 SPA → Express REST API → SQLite.
+Full-stack multi-user app: Vue 3 SPA → Express REST API → SQLite. JWT auth (jsonwebtoken + bcryptjs) with Pinia state management.
 
-**Two pages**, routed client-side via vue-router:
-- `/` — InputPage: text input for comma-separated star ratings (3-6), recent records list, JSON import/export
-- `/statistics` — StatisticsPage: year/month selector, ECharts donut pie charts + tables showing star-level breakdowns
+**Three pages**, routed via vue-router with auth guard:
+- `/` — InputPage: manual star entry (comma-separated 3-6), recent records, JSON export, CSV import
+- `/records` — RecordsPage: paginated table with inline edit (star + date), checkbox batch delete, delete all
+- `/statistics` — StatisticsPage: year/month selector, ECharts pie charts + tables
+- `/login`, `/register` — auth pages (no guard)
 
-**Data flow**: Components call `fetch()` directly (no state management library). The `useStats.js` composable encapsulates stats API fetching. InputPage manages its own records state.
+**Data flow**: Components use `api()` from `client/src/utils/api.js` (auto-attaches `Authorization: Bearer <token>`, 401 triggers logout). The `useStats.js` composable handles stats fetching. `stores/auth.js` (Pinia) manages auth state, initializes from localStorage on page load.
 
-**Backend**: All routes are mounted under `/api/records` in `server/routes/records.js`. Stats aggregation happens in the `/api/records/stats` endpoint — the server parses JSON `stars` arrays from the DB and counts occurrences per star level (3/4/5/6). The response shape is `{ total, breakdown: [{ star, count, percentage }] }`.
+**Backend** — `server/app.js` creates the Express app (helmet, morgan, rate-limit, CORS, JSON parser); `server/index.js` adds static serving + SPA fallback and starts listening. Route files:
 
-**Database**: Single SQLite file (`server/data.db`), auto-created on first run. One table:
+| File | Key endpoints |
+|------|--------------|
+| `routes/auth.js` | `POST /api/auth/register`, `/login`, `GET /me` |
+| `routes/records.js` | `GET /` (paginated with `?offset=&limit=`), `POST /` (with optional `created_at`), `POST /batch` (CSV import), `PUT /:id` (edit stars + date), `DELETE /:id`, `POST /delete-batch` (`{ids:[...]}`), `DELETE /all`, `GET /stats`, `GET /stats/years` |
+
+All records routes are behind `authMiddleware` which verifies JWT and sets `req.user`. SQL queries filter by `user_id`.
+
+**Database** — SQLite (`server/data.db`), auto-created. Two tables:
 ```sql
-records (id INTEGER PK, stars TEXT, count INTEGER, created_at DATETIME)
+users (id INTEGER PK, username TEXT UNIQUE, password_hash TEXT, created_at DATETIME)
+records (id INTEGER PK, stars TEXT, count INTEGER, user_id INTEGER REFERENCES users, created_at DATETIME)
 ```
-`stars` is stored as a JSON array string. WAL mode enabled.
+`stars` is stored as a JSON array string. WAL mode enabled. In tests, `DB_PATH=:memory:` uses an in-memory DB. `DISABLE_RATE_LIMIT` env var skips rate limiting (set in vitest.config.js and start-e2e.js).
 
-**Production**: Express serves `client/dist/` as static files, with SPA fallback for non-API routes. In dev, Vite proxies `/api` requests to Express.
+**Testing**: Backend tests use vitest + supertest with in-memory DB. E2E tests use Playwright with two `webServer` entries (backend on 3000, Vite on 5173), `workers: 1` for serial execution. Test auth via `page.request.post` to backend + `page.addInitScript` for localStorage injection. `start-e2e.js` uses dynamic `import()` because ESM static imports are hoisted before env var setup.
+
+**Production**: Express serves `client/dist/` as static files with SPA fallback. `update.sh` handles `git pull → npm install → vite build → pm2 restart`. Helmet is configured with strictTransportSecurity/CSP/crossOriginOpenerPolicy disabled until HTTPS is set up.

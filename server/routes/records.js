@@ -7,19 +7,23 @@ const router = Router();
 // All routes require authentication
 router.use(authMiddleware);
 
-// POST /api/records - create one or more records
+// POST /api/records - create a record
 router.post('/', (req, res) => {
   try {
-    const { stars, created_at } = req.body;
+    const { stars, operator_id, created_at } = req.body;
 
-    if (!Array.isArray(stars) || stars.length === 0) {
-      return res.status(400).json({ error: '请输入有效的星级数组' });
+    if (stars === undefined || stars === null) {
+      return res.status(400).json({ error: '请输入星级' });
     }
 
-    for (const s of stars) {
-      if (![3, 4, 5, 6].includes(s)) {
-        return res.status(400).json({ error: '星级只能是 3, 4, 5, 6' });
-      }
+    const star = parseInt(stars);
+    if (![3, 4, 5, 6].includes(star)) {
+      return res.status(400).json({ error: '星级只能是 3, 4, 5, 6' });
+    }
+
+    // Validate optional operator_id
+    if (operator_id !== undefined && operator_id !== null && typeof operator_id !== 'string') {
+      return res.status(400).json({ error: 'operator_id 格式错误' });
     }
 
     // Validate optional created_at
@@ -36,13 +40,13 @@ router.post('/', (req, res) => {
     }
 
     if (dateValue) {
-      const stmt = db.prepare('INSERT INTO records (stars, count, user_id, created_at) VALUES (?, ?, ?, ?)');
-      const result = stmt.run(JSON.stringify(stars), stars.length, req.user.id, dateValue);
-      res.json({ id: result.lastInsertRowid, stars, count: stars.length });
+      const stmt = db.prepare('INSERT INTO records (stars, count, user_id, operator_id, created_at) VALUES (?, 1, ?, ?, ?)');
+      const result = stmt.run(String(star), req.user.id, operator_id || null, dateValue);
+      res.json({ id: result.lastInsertRowid, stars: star, operator_id: operator_id || null, count: 1 });
     } else {
-      const stmt = db.prepare('INSERT INTO records (stars, count, user_id) VALUES (?, ?, ?)');
-      const result = stmt.run(JSON.stringify(stars), stars.length, req.user.id);
-      res.json({ id: result.lastInsertRowid, stars, count: stars.length });
+      const stmt = db.prepare('INSERT INTO records (stars, count, user_id, operator_id) VALUES (?, 1, ?, ?)');
+      const result = stmt.run(String(star), req.user.id, operator_id || null);
+      res.json({ id: result.lastInsertRowid, stars: star, operator_id: operator_id || null, count: 1 });
     }
   } catch (err) {
     res.status(500).json({ error: '服务器错误' });
@@ -58,31 +62,35 @@ router.post('/batch', (req, res) => {
       return res.status(400).json({ error: '请提供有效的记录数组' });
     }
 
-    const insert = db.prepare(
-      'INSERT INTO records (stars, count, user_id, created_at) VALUES (?, ?, ?, ?)'
+    const insertWithDate = db.prepare(
+      'INSERT INTO records (stars, count, user_id, operator_id, created_at) VALUES (?, 1, ?, ?, ?)'
+    );
+    const insertNoDate = db.prepare(
+      'INSERT INTO records (stars, count, user_id, operator_id) VALUES (?, 1, ?, ?)'
     );
 
     let imported = 0;
     const txn = db.transaction(() => {
       for (const row of rows) {
-        const { stars, created_at } = row;
+        const { stars, operator_id, created_at } = row;
 
-        if (!Array.isArray(stars) || stars.length === 0) continue;
-        if (stars.some(s => ![3, 4, 5, 6].includes(s))) continue;
+        if (stars === undefined || stars === null) continue;
+        const star = parseInt(stars);
+        if (![3, 4, 5, 6].includes(star)) continue;
 
-        let dateValue;
-        if (created_at && /^\d{4}-\d{2}-\d{2}$/.test(created_at) && !isNaN(new Date(created_at).getTime())) {
-          dateValue = created_at + ' 00:00:00';
-        } else if (created_at) {
-          continue; // Invalid date, skip
-        } else {
-          dateValue = null;
+        let dateValue = null;
+        if (created_at) {
+          if (/^\d{4}-\d{2}-\d{2}$/.test(created_at) && !isNaN(new Date(created_at).getTime())) {
+            dateValue = created_at + ' 00:00:00';
+          } else {
+            continue; // Invalid date, skip
+          }
         }
 
         if (dateValue) {
-          insert.run(JSON.stringify(stars), stars.length, req.user.id, dateValue);
+          insertWithDate.run(String(star), req.user.id, operator_id || null, dateValue);
         } else {
-          insert.run(JSON.stringify(stars), stars.length, req.user.id, null);
+          insertNoDate.run(String(star), req.user.id, operator_id || null);
         }
         imported++;
       }
@@ -107,20 +115,20 @@ router.get('/', (req, res) => {
         'SELECT COUNT(*) as total FROM records WHERE user_id = ?'
       ).get(req.user.id);
       const records = db.prepare(
-        'SELECT id, stars, count, created_at FROM records WHERE user_id = ? ORDER BY id DESC LIMIT ? OFFSET ?'
+        'SELECT id, stars, count, operator_id, created_at FROM records WHERE user_id = ? ORDER BY id DESC LIMIT ? OFFSET ?'
       ).all(req.user.id, limit, offset);
       return res.json({
-        records: records.map(r => ({ ...r, stars: JSON.parse(r.stars) })),
+        records: records.map(r => ({ ...r, stars: parseInt(r.stars) })),
         total: totalRow.total
       });
     }
 
     // Simple mode: return array (backwards compatible)
     const records = db.prepare(
-      'SELECT id, stars, count, created_at FROM records WHERE user_id = ? ORDER BY id DESC LIMIT ?'
+      'SELECT id, stars, count, operator_id, created_at FROM records WHERE user_id = ? ORDER BY id DESC LIMIT ?'
     ).all(req.user.id, limit);
 
-    res.json(records.map(r => ({ ...r, stars: JSON.parse(r.stars) })));
+    res.json(records.map(r => ({ ...r, stars: parseInt(r.stars) })));
   } catch (err) {
     res.status(500).json({ error: '服务器错误' });
   }
@@ -153,18 +161,18 @@ router.delete('/:id', (req, res) => {
   }
 });
 
-// PUT /api/records/:id - edit a record's stars and optionally its date
+// PUT /api/records/:id - edit a record's star, operator, and optionally its date
 router.put('/:id', (req, res) => {
   try {
-    const { stars, created_at } = req.body;
+    const { stars, operator_id, created_at } = req.body;
 
-    if (!Array.isArray(stars) || stars.length === 0) {
-      return res.status(400).json({ error: '请输入有效的星级数组' });
+    if (stars === undefined || stars === null) {
+      return res.status(400).json({ error: '请输入星级' });
     }
-    for (const s of stars) {
-      if (![3, 4, 5, 6].includes(s)) {
-        return res.status(400).json({ error: '星级只能是 3, 4, 5, 6' });
-      }
+
+    const star = parseInt(stars);
+    if (![3, 4, 5, 6].includes(star)) {
+      return res.status(400).json({ error: '星级只能是 3, 4, 5, 6' });
     }
 
     let dateValue = null;
@@ -175,22 +183,39 @@ router.put('/:id', (req, res) => {
       dateValue = created_at + ' 00:00:00';
     }
 
-    let result;
-    if (dateValue) {
-      result = db.prepare(
-        'UPDATE records SET stars = ?, count = ?, created_at = ? WHERE id = ? AND user_id = ?'
-      ).run(JSON.stringify(stars), stars.length, dateValue, req.params.id, req.user.id);
-    } else {
-      result = db.prepare(
-        'UPDATE records SET stars = ?, count = ? WHERE id = ? AND user_id = ?'
-      ).run(JSON.stringify(stars), stars.length, req.params.id, req.user.id);
+    // Build dynamic UPDATE
+    const setClauses = ['stars = ?'];
+    const params = [String(star)];
+
+    // operator_id: undefined = keep existing, null = clear, string = set
+    if (operator_id !== undefined) {
+      setClauses.push('operator_id = ?');
+      params.push(operator_id);
     }
+
+    if (dateValue) {
+      setClauses.push('created_at = ?');
+      params.push(dateValue);
+    }
+
+    params.push(req.params.id, req.user.id);
+
+    const result = db.prepare(
+      `UPDATE records SET ${setClauses.join(', ')} WHERE id = ? AND user_id = ?`
+    ).run(...params);
 
     if (result.changes === 0) {
       return res.status(404).json({ error: '记录不存在' });
     }
 
-    res.json({ id: parseInt(req.params.id), stars, count: stars.length });
+    // Return updated record
+    const updated = db.prepare('SELECT id, stars, operator_id FROM records WHERE id = ?').get(req.params.id);
+    res.json({
+      id: updated.id,
+      stars: parseInt(updated.stars),
+      operator_id: updated.operator_id,
+      count: 1
+    });
   } catch (err) {
     res.status(500).json({ error: '服务器错误' });
   }
@@ -236,32 +261,31 @@ router.get('/stats', (req, res) => {
       return res.status(400).json({ error: '请提供年份参数' });
     }
 
-    let records;
+    let rows;
     if (month) {
-      records = db.prepare(`
-        SELECT stars FROM records
+      rows = db.prepare(`
+        SELECT stars, COUNT(*) as cnt FROM records
         WHERE user_id = ? AND strftime('%Y', created_at) = ? AND strftime('%m', created_at) = ?
+        GROUP BY stars
       `).all(req.user.id, year, String(month).padStart(2, '0'));
     } else {
-      records = db.prepare(`
-        SELECT stars FROM records
+      rows = db.prepare(`
+        SELECT stars, COUNT(*) as cnt FROM records
         WHERE user_id = ? AND strftime('%Y', created_at) = ?
+        GROUP BY stars
       `).all(req.user.id, year);
     }
 
-    // Aggregate star counts
+    // Build star counts
     const starCounts = { 3: 0, 4: 0, 5: 0, 6: 0 };
-    let total = 0;
-
-    for (const row of records) {
-      const stars = JSON.parse(row.stars);
-      for (const s of stars) {
-        if (starCounts.hasOwnProperty(s)) {
-          starCounts[s]++;
-          total++;
-        }
+    for (const row of rows) {
+      const star = parseInt(row.stars);
+      if (starCounts.hasOwnProperty(star)) {
+        starCounts[star] = row.cnt;
       }
     }
+
+    const total = Object.values(starCounts).reduce((a, b) => a + b, 0);
 
     const breakdown = [3, 4, 5, 6].map(star => ({
       star,

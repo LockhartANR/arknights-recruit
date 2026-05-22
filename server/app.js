@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import authRouter from './routes/auth.js';
 import recordsRouter from './routes/records.js';
+import operatorsRouter from './routes/operators.js';
 
 export function createApp() {
   const app = express();
@@ -31,6 +32,7 @@ export function createApp() {
   // API routes
   app.use('/api/auth', authRouter);
   app.use('/api/records', recordsRouter);
+  app.use('/api/operators', operatorsRouter);
 
   return app;
 }

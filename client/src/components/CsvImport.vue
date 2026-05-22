@@ -243,7 +243,7 @@ async function doImport() {
   importError.value = ''
 
   const rows = validRows.value.map(row => ({
-    stars: [row.star],
+    stars: row.star,
     created_at: row.created_at
   }))
 

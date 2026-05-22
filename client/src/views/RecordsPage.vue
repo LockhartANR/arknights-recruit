@@ -28,6 +28,7 @@
               </th>
               <th>日期</th>
               <th>星级</th>
+              <th>干员</th>
               <th style="width:120px">操作</th>
             </tr>
           </thead>
@@ -58,10 +59,23 @@
                   </select>
                 </template>
                 <template v-else>
-                  <span v-for="(s, i) in r.stars" :key="i">
-                    <span :class="'star-' + s">{{ s }}★</span>
-                    <span v-if="i < r.stars.length - 1">, </span>
-                  </span>
+                  <span :class="'star-' + r.stars">{{ r.stars }}★</span>
+                </template>
+              </td>
+              <td>
+                <template v-if="editing?.id === r.id">
+                  <OperatorSelector v-model="editing.operator_id" />
+                </template>
+                <template v-else>
+                  <template v-if="r.operator_id && getOperator(r.operator_id)">
+                    <img
+                      :src="getOperator(r.operator_id).avatar"
+                      class="op-avatar"
+                      @error="onImgError"
+                    />
+                    {{ getOperator(r.operator_id).name }}
+                  </template>
+                  <span v-else class="text-muted-inline">(未指定)</span>
                 </template>
               </td>
               <td>
@@ -110,6 +124,10 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { api } from '../utils/api.js'
+import { useOperators } from '../composables/useOperators.js'
+import OperatorSelector from '../components/OperatorSelector.vue'
+
+const { fetchOperators, getOperator } = useOperators()
 
 const records = ref([])
 const total = ref(0)
@@ -174,7 +192,8 @@ function clearSelection() {
 function startEdit(record) {
   editing.value = {
     id: record.id,
-    stars: record.stars[0] || 3,
+    stars: record.stars,
+    operator_id: record.operator_id || null,
     date: (record.created_at || '').slice(0, 10)
   }
 }
@@ -187,11 +206,16 @@ async function saveEdit(id) {
   const ed = editing.value
   if (!ed || ed.id !== id) return
 
+  const body = { stars: ed.stars, created_at: ed.date }
+  if (ed.operator_id !== undefined) {
+    body.operator_id = ed.operator_id
+  }
+
   try {
     await api(`/api/records/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ stars: [ed.stars], created_at: ed.date })
+      body: JSON.stringify(body)
     })
     editing.value = null
     await fetchRecords()
@@ -240,7 +264,14 @@ async function deleteAll() {
   } catch { /* ignore */ }
 }
 
-onMounted(fetchRecords)
+function onImgError(e) {
+  e.target.style.display = 'none'
+}
+
+onMounted(() => {
+  fetchOperators()
+  fetchRecords()
+})
 </script>
 
 <style scoped>
@@ -298,5 +329,19 @@ onMounted(fetchRecords)
   font-size: 14px;
   line-height: 1.6;
   margin: 0;
+}
+
+.op-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 3px;
+  vertical-align: middle;
+  margin-right: 4px;
+  background: #f0f0f0;
+}
+
+.text-muted-inline {
+  color: #bbb;
+  font-size: 12px;
 }
 </style>

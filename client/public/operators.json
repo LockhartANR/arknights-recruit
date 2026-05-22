@@ -1,0 +1,12 @@
+[
+  { "id": "amiya", "name": "阿米娅", "rarity": 5, "class": "术师", "avatar": "/operators/_placeholder.png" },
+  { "id": "silverash", "name": "银灰", "rarity": 6, "class": "近卫", "avatar": "/operators/_placeholder.png" },
+  { "id": "exusiai", "name": "能天使", "rarity": 6, "class": "狙击", "avatar": "/operators/_placeholder.png" },
+  { "id": "siege", "name": "推进之王", "rarity": 6, "class": "先锋", "avatar": "/operators/_placeholder.png" },
+  { "id": "shining", "name": "闪灵", "rarity": 6, "class": "医疗", "avatar": "/operators/_placeholder.png" },
+  { "id": "texas", "name": "德克萨斯", "rarity": 5, "class": "先锋", "avatar": "/operators/_placeholder.png" },
+  { "id": "lappland", "name": "拉普兰德", "rarity": 5, "class": "近卫", "avatar": "/operators/_placeholder.png" },
+  { "id": "bluepoison", "name": "蓝毒", "rarity": 5, "class": "狙击", "avatar": "/operators/_placeholder.png" },
+  { "id": "platinum", "name": "白金", "rarity": 5, "class": "狙击", "avatar": "/operators/_placeholder.png" },
+  { "id": "pramanix", "name": "初雪", "rarity": 5, "class": "辅助", "avatar": "/operators/_placeholder.png" }
+]

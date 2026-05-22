@@ -142,6 +142,16 @@ describe('Auth API', () => {
   });
 });
 
+describe('Operators API', () => {
+  describe('GET /api/operators', () => {
+    it('returns operator list without auth', async () => {
+      const res = await request(app).get('/api/operators');
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body)).toBe(true);
+    });
+  });
+});
+
 describe('Records API', () => {
   let token;
   let otherToken;
@@ -168,32 +178,43 @@ describe('Records API', () => {
   });
 
   describe('POST /api/records', () => {
-    it('creates a record', async () => {
+    it('creates a record with single star', async () => {
       const res = await request(app)
         .post('/api/records')
         .set('Authorization', `Bearer ${token}`)
-        .send({ stars: [4, 5, 3] });
+        .send({ stars: 4 });
 
       expect(res.status).toBe(200);
-      expect(res.body.stars).toEqual([4, 5, 3]);
-      expect(res.body.count).toBe(3);
+      expect(res.body.stars).toBe(4);
+      expect(res.body.count).toBe(1);
       expect(res.body.id).toBeDefined();
+    });
+
+    it('creates a record with operator_id', async () => {
+      const res = await request(app)
+        .post('/api/records')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ stars: 6, operator_id: 'silverash' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.stars).toBe(6);
+      expect(res.body.operator_id).toBe('silverash');
     });
 
     it('rejects invalid star values', async () => {
       const res = await request(app)
         .post('/api/records')
         .set('Authorization', `Bearer ${token}`)
-        .send({ stars: [1, 2, 7] });
+        .send({ stars: 7 });
 
       expect(res.status).toBe(400);
     });
 
-    it('rejects empty stars array', async () => {
+    it('rejects null stars', async () => {
       const res = await request(app)
         .post('/api/records')
         .set('Authorization', `Bearer ${token}`)
-        .send({ stars: [] });
+        .send({ stars: null });
 
       expect(res.status).toBe(400);
     });
@@ -210,26 +231,52 @@ describe('Records API', () => {
     it('returns 401 without auth', async () => {
       const res = await request(app)
         .post('/api/records')
-        .send({ stars: [4, 5] });
+        .send({ stars: 4 });
 
       expect(res.status).toBe(401);
       expect(res.body.error).toBe('未登录');
     });
   });
 
-  describe('GET /api/records', () => {
-    beforeAll(async () => {
-      // Add a few records for alice
-      await request(app)
-        .post('/api/records')
+  describe('POST /api/records/batch', () => {
+    it('creates multiple records', async () => {
+      const res = await request(app)
+        .post('/api/records/batch')
         .set('Authorization', `Bearer ${token}`)
-        .send({ stars: [3, 3] });
-      await request(app)
-        .post('/api/records')
-        .set('Authorization', `Bearer ${token}`)
-        .send({ stars: [6] });
+        .send({ rows: [
+          { stars: 3 },
+          { stars: 5 },
+          { stars: 6, operator_id: 'exusiai' }
+        ]});
+
+      expect(res.status).toBe(200);
+      expect(res.body.imported).toBe(3);
     });
 
+    it('skips invalid rows', async () => {
+      const res = await request(app)
+        .post('/api/records/batch')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ rows: [
+          { stars: 3 },
+          { stars: 99 }
+        ]});
+
+      expect(res.status).toBe(200);
+      expect(res.body.imported).toBe(1);
+    });
+
+    it('rejects empty rows array', async () => {
+      const res = await request(app)
+        .post('/api/records/batch')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ rows: [] });
+
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe('GET /api/records', () => {
     it('returns records for authenticated user', async () => {
       const res = await request(app)
         .get('/api/records')
@@ -237,9 +284,9 @@ describe('Records API', () => {
 
       expect(res.status).toBe(200);
       expect(Array.isArray(res.body)).toBe(true);
-      expect(res.body.length).toBeGreaterThanOrEqual(3);
-      // Records should have parsed stars array
-      expect(Array.isArray(res.body[0].stars)).toBe(true);
+      expect(res.body.length).toBeGreaterThanOrEqual(4);
+      // Stars should be integer, not array
+      expect(typeof res.body[0].stars).toBe('number');
     });
 
     it('respects limit parameter', async () => {
@@ -252,7 +299,6 @@ describe('Records API', () => {
     });
 
     it('enforces data isolation between users', async () => {
-      // Bob should see no records (only alice has data)
       const res = await request(app)
         .get('/api/records')
         .set('Authorization', `Bearer ${otherToken}`);
@@ -268,13 +314,81 @@ describe('Records API', () => {
     });
   });
 
-  describe('DELETE /api/records/:id', () => {
-    it('deletes own record', async () => {
-      // Create a record to delete
+  describe('PUT /api/records/:id', () => {
+    it('edits a record star', async () => {
       const create = await request(app)
         .post('/api/records')
         .set('Authorization', `Bearer ${token}`)
-        .send({ stars: [3] });
+        .send({ stars: 3 });
+      const recordId = create.body.id;
+
+      const res = await request(app)
+        .put(`/api/records/${recordId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ stars: 5 });
+
+      expect(res.status).toBe(200);
+      expect(res.body.stars).toBe(5);
+    });
+
+    it('edits a record with operator_id', async () => {
+      const create = await request(app)
+        .post('/api/records')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ stars: 4 });
+      const recordId = create.body.id;
+
+      const res = await request(app)
+        .put(`/api/records/${recordId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ stars: 6, operator_id: 'amiya' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.stars).toBe(6);
+      expect(res.body.operator_id).toBe('amiya');
+    });
+
+    it('clears operator_id with null', async () => {
+      const create = await request(app)
+        .post('/api/records')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ stars: 5, operator_id: 'texas' });
+      const recordId = create.body.id;
+
+      const res = await request(app)
+        .put(`/api/records/${recordId}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ stars: 5, operator_id: null });
+
+      expect(res.status).toBe(200);
+      expect(res.body.operator_id).toBeNull();
+    });
+
+    it('rejects invalid star in edit', async () => {
+      const res = await request(app)
+        .put('/api/records/1')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ stars: 7 });
+
+      expect(res.status).toBe(400);
+    });
+
+    it('returns 404 for non-existent record', async () => {
+      const res = await request(app)
+        .put('/api/records/99999')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ stars: 4 });
+
+      expect(res.status).toBe(404);
+    });
+  });
+
+  describe('DELETE /api/records/:id', () => {
+    it('deletes own record', async () => {
+      const create = await request(app)
+        .post('/api/records')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ stars: 3 });
       const recordId = create.body.id;
 
       const res = await request(app)
@@ -286,14 +400,12 @@ describe('Records API', () => {
     });
 
     it('prevents cross-user deletion', async () => {
-      // Alice creates a record
       const create = await request(app)
         .post('/api/records')
         .set('Authorization', `Bearer ${token}`)
-        .send({ stars: [5, 5] });
+        .send({ stars: 5 });
       const recordId = create.body.id;
 
-      // Bob tries to delete Alice's record
       const res = await request(app)
         .delete(`/api/records/${recordId}`)
         .set('Authorization', `Bearer ${otherToken}`);
@@ -330,15 +442,14 @@ describe('Stats API', () => {
       .send({ username: 'statguy', password: '123456' });
     token = login.body.token;
 
-    // Add records with known distribution
+    // Add records with known distribution using batch
     await request(app)
-      .post('/api/records')
+      .post('/api/records/batch')
       .set('Authorization', `Bearer ${token}`)
-      .send({ stars: [3, 4, 5, 6] });
-    await request(app)
-      .post('/api/records')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ stars: [3, 3] });
+      .send({ rows: [
+        { stars: 3 }, { stars: 4 }, { stars: 5 }, { stars: 6 },
+        { stars: 3 }, { stars: 3 }
+      ]});
   });
 
   describe('GET /api/records/stats/years', () => {
@@ -353,7 +464,6 @@ describe('Stats API', () => {
     });
 
     it('shows no years for user with no data', async () => {
-      // Register a fresh user
       await request(app)
         .post('/api/auth/register')
         .send({ username: 'empty', password: '123456' });
@@ -392,7 +502,7 @@ describe('Stats API', () => {
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(200);
-      expect(res.body.total).toBe(6); // 4 + 2 stars
+      expect(res.body.total).toBe(6); // 3,4,5,6,3,3 = 6 total
       expect(res.body.breakdown).toHaveLength(4);
 
       // Star 3 should have count 3
@@ -417,7 +527,6 @@ describe('Stats API', () => {
     });
 
     it('enforces data isolation in stats', async () => {
-      // Another user sees empty stats
       const login = await request(app)
         .post('/api/auth/login')
         .send({ username: 'empty', password: '123456' });

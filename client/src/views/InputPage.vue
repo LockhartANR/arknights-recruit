@@ -111,11 +111,14 @@ async function submit() {
   const parts = inputText.value.split(',').map(s => s.trim()).filter(s => s !== '')
   const stars = parts.map(Number)
 
+  // Submit each star as an individual record via batch endpoint
+  const rows = stars.map(s => ({ stars: s }))
+
   try {
-    const res = await api('/api/records', {
+    const res = await api('/api/records/batch', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ stars })
+      body: JSON.stringify({ rows })
     })
     if (!res.ok) {
       const data = await res.json()
@@ -158,22 +161,45 @@ async function handleImport(e) {
       return
     }
 
-    let imported = 0
+    // Build batch rows, handling both old and new formats
+    const rows = []
     for (const record of data) {
-      if (!record.stars || !Array.isArray(record.stars)) continue
-      const stars = record.stars
-      const valid = stars.every(s => [3,4,5,6].includes(s))
-      if (!valid || stars.length === 0) continue
+      if (record.stars === undefined) continue
 
-      await api('/api/records', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stars })
-      })
-      imported++
+      if (Array.isArray(record.stars)) {
+        // Old format: stars is an array like [4, 3, 5] -> split into individual rows
+        for (const s of record.stars) {
+          if ([3, 4, 5, 6].includes(s)) {
+            rows.push({ stars: s, created_at: record.created_at })
+          }
+        }
+      } else {
+        // New format: stars is a single integer
+        const s = parseInt(record.stars)
+        if ([3, 4, 5, 6].includes(s)) {
+          rows.push({ stars: s, created_at: record.created_at })
+        }
+      }
     }
 
-    successMsg.value = `已导入 ${imported} 条记录`
+    if (rows.length === 0) {
+      errorMsg.value = '导入失败：没有有效记录'
+      return
+    }
+
+    const res = await api('/api/records/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows })
+    })
+
+    const result = await res.json()
+    if (!res.ok) {
+      errorMsg.value = result.error || '导入失败'
+      return
+    }
+
+    successMsg.value = `已导入 ${result.imported} 条记录`
     setTimeout(() => { successMsg.value = '' }, 2000)
     await fetchRecords()
   } catch {
