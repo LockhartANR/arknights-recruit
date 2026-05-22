@@ -34,12 +34,20 @@
             @change="handleImport"
           />
           <button
+            class="btn btn-sm btn-default"
+            @click="showCsvImport = !showCsvImport"
+          >导入 CSV</button>
+          <button
             v-if="records.length > 0"
             class="btn btn-sm btn-default"
             @click="exportData"
           >导出数据</button>
         </div>
       </div>
+      <CsvImport
+        v-if="showCsvImport"
+        @imported="onCsvImported"
+      />
       <RecentRecords
         :records="records"
         :loading="loading"
@@ -52,6 +60,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import RecentRecords from '../components/RecentRecords.vue'
+import CsvImport from '../components/CsvImport.vue'
 import { api } from '../utils/api.js'
 
 const inputText = ref('')
@@ -59,6 +68,11 @@ const errorMsg = ref('')
 const successMsg = ref('')
 const records = ref([])
 const loading = ref(false)
+const showCsvImport = ref(false)
+
+function onCsvImported() {
+  fetchRecords()
+}
 
 async function fetchRecords() {
   loading.value = true

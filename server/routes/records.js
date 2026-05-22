@@ -10,7 +10,7 @@ router.use(authMiddleware);
 // POST /api/records - create one or more records
 router.post('/', (req, res) => {
   try {
-    const { stars } = req.body;
+    const { stars, created_at } = req.body;
 
     if (!Array.isArray(stars) || stars.length === 0) {
       return res.status(400).json({ error: '请输入有效的星级数组' });
@@ -22,14 +22,74 @@ router.post('/', (req, res) => {
       }
     }
 
-    const stmt = db.prepare('INSERT INTO records (stars, count, user_id) VALUES (?, ?, ?)');
-    const result = stmt.run(JSON.stringify(stars), stars.length, req.user.id);
+    // Validate optional created_at
+    let dateValue = null;
+    if (created_at) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(created_at)) {
+        return res.status(400).json({ error: '日期格式错误，需为 YYYY-MM-DD' });
+      }
+      const d = new Date(created_at);
+      if (isNaN(d.getTime())) {
+        return res.status(400).json({ error: '无效的日期' });
+      }
+      dateValue = created_at + ' 00:00:00';
+    }
 
-    res.json({
-      id: result.lastInsertRowid,
-      stars,
-      count: stars.length
+    if (dateValue) {
+      const stmt = db.prepare('INSERT INTO records (stars, count, user_id, created_at) VALUES (?, ?, ?, ?)');
+      const result = stmt.run(JSON.stringify(stars), stars.length, req.user.id, dateValue);
+      res.json({ id: result.lastInsertRowid, stars, count: stars.length });
+    } else {
+      const stmt = db.prepare('INSERT INTO records (stars, count, user_id) VALUES (?, ?, ?)');
+      const result = stmt.run(JSON.stringify(stars), stars.length, req.user.id);
+      res.json({ id: result.lastInsertRowid, stars, count: stars.length });
+    }
+  } catch (err) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/records/batch - create multiple records (for CSV import etc.)
+router.post('/batch', (req, res) => {
+  try {
+    const { rows } = req.body;
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return res.status(400).json({ error: '请提供有效的记录数组' });
+    }
+
+    const insert = db.prepare(
+      'INSERT INTO records (stars, count, user_id, created_at) VALUES (?, ?, ?, ?)'
+    );
+
+    let imported = 0;
+    const txn = db.transaction(() => {
+      for (const row of rows) {
+        const { stars, created_at } = row;
+
+        if (!Array.isArray(stars) || stars.length === 0) continue;
+        if (stars.some(s => ![3, 4, 5, 6].includes(s))) continue;
+
+        let dateValue;
+        if (created_at && /^\d{4}-\d{2}-\d{2}$/.test(created_at) && !isNaN(new Date(created_at).getTime())) {
+          dateValue = created_at + ' 00:00:00';
+        } else if (created_at) {
+          continue; // Invalid date, skip
+        } else {
+          dateValue = null;
+        }
+
+        if (dateValue) {
+          insert.run(JSON.stringify(stars), stars.length, req.user.id, dateValue);
+        } else {
+          insert.run(JSON.stringify(stars), stars.length, req.user.id, null);
+        }
+        imported++;
+      }
     });
+
+    txn();
+    res.json({ imported });
   } catch (err) {
     res.status(500).json({ error: '服务器错误' });
   }
