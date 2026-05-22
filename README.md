@@ -85,15 +85,15 @@ sudo ufw allow 3000
 
 ```
 server/           Express REST API + SQLite
-  routes/         auth.js（注册/登录）、records.js（数据 CRUD + 统计）
+  routes/         auth.js（注册/登录）、records.js（CRUD + 统计 + 批量导入 + 批量删除）
   middleware/     auth.js（JWT 验证中间件）
   db.js           SQLite 数据库初始化与迁移
 client/           Vue 3 SPA
   src/
-    views/        登录、注册、录入、统计页面
+    views/        登录、注册、录入、记录管理、统计页面
     stores/       Pinia 认证状态管理
     utils/        API 请求封装（自动附加 JWT）
-    components/   导航栏、记录列表、图表组件
+    components/   导航栏、记录列表、图表、CSV 导入
     composables/  统计数据获取封装
 ```
 
