@@ -45,13 +45,41 @@ cd server && npm test
 cd client && npm run test:e2e
 ```
 
-## 生产构建
+## 部署到服务器
 
 ```bash
-cd client && npm run build
-# 然后: cd ../server && node index.js
-# Express 会自动 serve client/dist/
+# 1. 服务器安装 Node.js 22+
+# 2. 克隆项目
+git clone <repo-url> && cd arknights-recruit
+
+# 3. 安装依赖
+cd server && npm install
+cd ../client && npm install
+
+# 4. 配置环境变量
+cd ../server
+cp .env.example .env
+# 编辑 .env：
+#   JWT_SECRET=<openssl rand -hex 32 生成>
+#   CORS_ORIGIN=http://你的域名或IP:3000
+
+# 5. 构建前端
+cd ../client && npx vite build
+
+# 6. 启动（pm2 保活 + 开机自启）
+cd ../server
+npm install -g pm2
+pm2 start index.js --name arknights-recruit
+pm2 save && pm2 startup
+
+# 7. 开放防火墙 3000 端口
+sudo ufw allow 3000
+# 云服务器还需要在安全组放行 TCP 3000
 ```
+
+浏览器访问 `http://<服务器IP>:3000`，注册账号后即可使用。
+
+更新部署：`git pull` → `cd client && npx vite build` → `pm2 restart arknights-recruit`。
 
 ## 项目结构
 

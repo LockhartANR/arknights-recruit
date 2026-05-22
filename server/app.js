@@ -11,10 +11,12 @@ export function createApp() {
 
   // Middleware
   app.use(helmet({
-    // Disable HSTS and HTTPS-enforcing headers until domain + SSL is set up
+    // Disable HTTPS-enforcing headers until domain + SSL is set up
+    // Without this, browsers may refuse to load assets over plain HTTP
     strictTransportSecurity: false,
     crossOriginOpenerPolicy: false,
-    originAgentCluster: false
+    originAgentCluster: false,
+    contentSecurityPolicy: false
   }));
   app.use(morgan('combined'));
   app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:5173' }));
