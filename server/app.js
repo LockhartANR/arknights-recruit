@@ -10,7 +10,12 @@ export function createApp() {
   const app = express();
 
   // Middleware
-  app.use(helmet());
+  app.use(helmet({
+    // Disable HSTS and HTTPS-enforcing headers until domain + SSL is set up
+    strictTransportSecurity: false,
+    crossOriginOpenerPolicy: false,
+    originAgentCluster: false
+  }));
   app.use(morgan('combined'));
   app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:5173' }));
   app.use(express.json({ limit: '1mb' }));
