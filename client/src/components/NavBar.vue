@@ -3,6 +3,7 @@
     <div class="navbar-brand">明日方舟公招统计</div>
     <div class="navbar-links">
       <router-link to="/" class="nav-link" active-class="active" exact>录入</router-link>
+      <router-link to="/records" class="nav-link" active-class="active">记录</router-link>
       <router-link to="/statistics" class="nav-link" active-class="active">统计</router-link>
     </div>
     <div v-if="auth.isLoggedIn" class="navbar-user">

@@ -95,20 +95,42 @@ router.post('/batch', (req, res) => {
   }
 });
 
-// GET /api/records - list recent records
+// GET /api/records - list records (supports ?limit=20 for recent, or ?offset=N&limit=N for paginated)
 router.get('/', (req, res) => {
   try {
+    const offset = req.query.offset !== undefined ? parseInt(req.query.offset) : null;
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+
+    if (offset !== null) {
+      // Paginated mode: return { records, total }
+      const totalRow = db.prepare(
+        'SELECT COUNT(*) as total FROM records WHERE user_id = ?'
+      ).get(req.user.id);
+      const records = db.prepare(
+        'SELECT id, stars, count, created_at FROM records WHERE user_id = ? ORDER BY id DESC LIMIT ? OFFSET ?'
+      ).all(req.user.id, limit, offset);
+      return res.json({
+        records: records.map(r => ({ ...r, stars: JSON.parse(r.stars) })),
+        total: totalRow.total
+      });
+    }
+
+    // Simple mode: return array (backwards compatible)
     const records = db.prepare(
       'SELECT id, stars, count, created_at FROM records WHERE user_id = ? ORDER BY id DESC LIMIT ?'
     ).all(req.user.id, limit);
 
-    const parsed = records.map(r => ({
-      ...r,
-      stars: JSON.parse(r.stars)
-    }));
+    res.json(records.map(r => ({ ...r, stars: JSON.parse(r.stars) })));
+  } catch (err) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
 
-    res.json(parsed);
+// DELETE /api/records/all - delete all records for current user
+router.delete('/all', (req, res) => {
+  try {
+    const result = db.prepare('DELETE FROM records WHERE user_id = ?').run(req.user.id);
+    res.json({ deleted: result.changes });
   } catch (err) {
     res.status(500).json({ error: '服务器错误' });
   }
@@ -126,6 +148,68 @@ router.delete('/:id', (req, res) => {
     }
 
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// PUT /api/records/:id - edit a record's stars and optionally its date
+router.put('/:id', (req, res) => {
+  try {
+    const { stars, created_at } = req.body;
+
+    if (!Array.isArray(stars) || stars.length === 0) {
+      return res.status(400).json({ error: '请输入有效的星级数组' });
+    }
+    for (const s of stars) {
+      if (![3, 4, 5, 6].includes(s)) {
+        return res.status(400).json({ error: '星级只能是 3, 4, 5, 6' });
+      }
+    }
+
+    let dateValue = null;
+    if (created_at) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(created_at) || isNaN(new Date(created_at).getTime())) {
+        return res.status(400).json({ error: '日期格式错误，需为 YYYY-MM-DD' });
+      }
+      dateValue = created_at + ' 00:00:00';
+    }
+
+    let result;
+    if (dateValue) {
+      result = db.prepare(
+        'UPDATE records SET stars = ?, count = ?, created_at = ? WHERE id = ? AND user_id = ?'
+      ).run(JSON.stringify(stars), stars.length, dateValue, req.params.id, req.user.id);
+    } else {
+      result = db.prepare(
+        'UPDATE records SET stars = ?, count = ? WHERE id = ? AND user_id = ?'
+      ).run(JSON.stringify(stars), stars.length, req.params.id, req.user.id);
+    }
+
+    if (result.changes === 0) {
+      return res.status(404).json({ error: '记录不存在' });
+    }
+
+    res.json({ id: parseInt(req.params.id), stars, count: stars.length });
+  } catch (err) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// POST /api/records/delete-batch - batch delete records
+router.post('/delete-batch', (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: '请提供要删除的记录 ID' });
+    }
+
+    const placeholders = ids.map(() => '?').join(',');
+    const result = db.prepare(
+      `DELETE FROM records WHERE id IN (${placeholders}) AND user_id = ?`
+    ).run(...ids, req.user.id);
+
+    res.json({ deleted: result.changes });
   } catch (err) {
     res.status(500).json({ error: '服务器错误' });
   }
