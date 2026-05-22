@@ -79,7 +79,7 @@ sudo ufw allow 3000
 
 浏览器访问 `http://<服务器IP>:3000`，注册账号后即可使用。
 
-更新部署：`git pull` → `cd client && npx vite build` → `pm2 restart arknights-recruit`。
+更新部署：`./update.sh`（拉代码 → 装依赖 → 构建前端 → 重启服务）。
 
 ## 项目结构
 
