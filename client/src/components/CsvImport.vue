@@ -5,18 +5,20 @@
       <input
         ref="fileInput"
         type="file"
-        accept=".csv,text/csv"
+        accept=".csv,.json,text/csv,application/json"
         style="display:none"
         @change="handleFile"
       />
       <button class="btn btn-sm btn-default" @click="$refs.fileInput.click()">
-        选择 CSV 文件
+        选择 CSV/JSON 文件
       </button>
       <span v-if="fileName" class="csv-filename">{{ fileName }}</span>
+      <span v-if="isJsonFile" class="csv-badge">JSON</span>
+      <span v-else-if="fileName" class="csv-badge csv-badge-csv">CSV</span>
     </div>
 
-    <!-- Step 2: Column mapping (shown after file is parsed) -->
-    <div v-if="headers.length > 0" class="csv-step">
+    <!-- Step 2: Column mapping (CSV only) -->
+    <div v-if="!isJsonFile && headers.length > 0" class="csv-step">
       <h4 class="csv-subtitle">列映射</h4>
       <div class="csv-mapping">
         <div class="csv-field">
@@ -52,23 +54,19 @@
 
     <!-- Step 3: Preview -->
     <div v-if="previewRows.length > 0" class="csv-step">
-      <h4 class="csv-subtitle">预览（前 {{ previewRows.length }} 行）</h4>
+      <h4 class="csv-subtitle">预览（前 {{ previewRows.length }} 行，共 {{ totalCount }} 条）</h4>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>年份</th>
-              <th>月份</th>
-              <th>日期</th>
               <th>星级</th>
+              <th>日期</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="(row, i) in previewRows" :key="i">
-              <td>{{ row.year }}</td>
-              <td>{{ row.month }}</td>
-              <td>{{ row.day }}</td>
-              <td>{{ row.star }}</td>
+              <td>{{ getStarDisplay(row) }}</td>
+              <td>{{ row.created_at?.slice(0, 10) || '-' }}</td>
             </tr>
           </tbody>
         </table>
@@ -76,21 +74,21 @@
     </div>
 
     <!-- Step 4: Import -->
-    <div v-if="validRows.length > 0" class="csv-step">
+    <div v-if="totalCount > 0" class="csv-step">
       <button
         class="btn btn-primary"
         :disabled="importing"
         @click="doImport"
       >
-        {{ importing ? `导入中... (${imported}/${validRows.length})` : `导入 ${validRows.length} 条记录` }}
+        {{ importing ? `导入中... (${imported}/${totalCount})` : `导入 ${totalCount} 条记录` }}
       </button>
       <p v-if="importResult" class="form-success">{{ importResult }}</p>
       <p v-if="importError" class="form-error">{{ importError }}</p>
     </div>
 
     <!-- Warnings -->
-    <div v-if="skippedRows > 0" class="csv-step">
-      <p class="csv-warn">已跳过 {{ skippedRows }} 行无效数据（星级非 3-6 或日期不合法）</p>
+    <div v-if="skippedCount > 0" class="csv-step">
+      <p class="csv-warn">已跳过 {{ skippedCount }} 条无效数据（星级非 3-6 或日期不合法）</p>
     </div>
   </div>
 </template>
@@ -103,9 +101,11 @@ const emit = defineEmits(['imported'])
 
 const fileInput = ref(null)
 const fileName = ref('')
+const isJsonFile = ref(false)
+
+// CSV state
 const headers = ref([])
 const allRows = ref([])
-
 const colMap = ref({
   year: null,
   month: null,
@@ -113,19 +113,16 @@ const colMap = ref({
   star: null
 })
 
+// JSON state
+const jsonRecords = ref([])
+
 const importing = ref(false)
 const imported = ref(0)
 const importResult = ref('')
 const importError = ref('')
-const skippedRows = ref(0)
 
-// Preview first 5 rows after mapping
-const previewRows = computed(() => {
-  return validRows.value.slice(0, 5)
-})
-
-// All valid rows after mapping
-const validRows = computed(() => {
+// CSV valid rows
+const csvValidRows = computed(() => {
   const result = []
   for (const row of allRows.value) {
     const y = colMap.value.year != null ? row[colMap.value.year]?.trim() : ''
@@ -145,21 +142,52 @@ const validRows = computed(() => {
     if (![3, 4, 5, 6].includes(star)) continue
 
     result.push({
-      year,
-      month,
-      day,
       star,
       created_at: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     })
   }
-  skippedRows.value = allRows.value.length - result.length
   return result
 })
 
-// Auto-match columns by header keywords
-function autoMatch(headers) {
+// JSON valid rows
+const jsonValidRows = computed(() => {
+  return jsonRecords.value.filter(r => {
+    const star = parseInt(r.stars)
+    if (![3, 4, 5, 6].includes(star)) return false
+    if (r.created_at && !/^\d{4}-\d{2}-\d{2}/.test(r.created_at)) {
+      // Also accept "YYYY-MM-DD HH:mm:ss" format
+      if (!/^\d{4}-\d{2}-\d{2}/.test(String(r.created_at).slice(0, 10))) return false
+    }
+    return true
+  }).map(r => ({
+    star: parseInt(r.stars),
+    created_at: r.created_at ? String(r.created_at).slice(0, 10) : null
+  }))
+})
+
+const totalCount = computed(() => {
+  return isJsonFile.value ? jsonValidRows.value.length : csvValidRows.value.length
+})
+
+const skippedCount = computed(() => {
+  if (isJsonFile.value) return jsonRecords.value.length - jsonValidRows.value.length
+  return allRows.value.length - csvValidRows.value.length
+})
+
+const previewRows = computed(() => {
+  const source = isJsonFile.value ? jsonValidRows.value : csvValidRows.value
+  return source.slice(0, 5)
+})
+
+function getStarDisplay(row) {
+  const star = row.star
+  return isJsonFile.value ? '★'.repeat(star) : star
+}
+
+// Auto-match CSV columns by header keywords
+function autoMatch(headersArr) {
   const map = { year: null, month: null, day: null, star: null }
-  headers.forEach((h, i) => {
+  headersArr.forEach((h, i) => {
     const lower = h.toLowerCase()
     if (map.year == null && /年|year/.test(lower)) map.year = i
     if (map.month == null && /月|month/.test(lower)) map.month = i
@@ -220,18 +248,44 @@ function handleFile(e) {
   importResult.value = ''
   importError.value = ''
 
+  // Reset state
+  headers.value = []
+  allRows.value = []
+  jsonRecords.value = []
+
+  const ext = file.name.split('.').pop().toLowerCase()
+  isJsonFile.value = ext === 'json'
+
   const reader = new FileReader()
   reader.onload = (ev) => {
     const text = ev.target.result
-    const parsed = parseCSV(text)
-    if (parsed.length < 2) {
-      importError.value = 'CSV 文件为空或格式不正确'
-      return
-    }
 
-    headers.value = parsed[0].map(h => h.trim())
-    allRows.value = parsed.slice(1)
-    autoMatch(headers.value)
+    if (isJsonFile.value) {
+      // JSON flow
+      try {
+        const data = JSON.parse(text)
+        if (!Array.isArray(data)) {
+          importError.value = 'JSON 文件格式不正确：需要数组格式'
+          return
+        }
+        jsonRecords.value = data
+        if (data.length === 0) {
+          importError.value = 'JSON 文件为空'
+        }
+      } catch {
+        importError.value = 'JSON 解析失败，请检查文件格式'
+      }
+    } else {
+      // CSV flow
+      const parsed = parseCSV(text)
+      if (parsed.length < 2) {
+        importError.value = 'CSV 文件为空或格式不正确'
+        return
+      }
+      headers.value = parsed[0].map(h => h.trim())
+      allRows.value = parsed.slice(1)
+      autoMatch(headers.value)
+    }
   }
   reader.readAsText(file, 'UTF-8')
 }
@@ -242,7 +296,8 @@ async function doImport() {
   importResult.value = ''
   importError.value = ''
 
-  const rows = validRows.value.map(row => ({
+  const source = isJsonFile.value ? jsonValidRows.value : csvValidRows.value
+  const rows = source.map(row => ({
     stars: row.star,
     created_at: row.created_at
   }))
@@ -285,6 +340,22 @@ watch(() => fileInput.value, () => {
   margin-left: 8px;
   font-size: 13px;
   color: #666;
+}
+.csv-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #f0f9eb;
+  color: #67c23a;
+  border-radius: 3px;
+  line-height: 20px;
+  vertical-align: middle;
+}
+.csv-badge-csv {
+  background: #ecf5ff;
+  color: #409eff;
 }
 .csv-subtitle {
   font-size: 14px;
