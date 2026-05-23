@@ -170,14 +170,14 @@ async function handleImport(e) {
         // Old format: stars is an array like [4, 3, 5] -> split into individual rows
         for (const s of record.stars) {
           if ([3, 4, 5, 6].includes(s)) {
-            rows.push({ stars: s, created_at: record.created_at })
+            rows.push({ stars: s, created_at: String(record.created_at || '').slice(0, 10) || undefined })
           }
         }
       } else {
         // New format: stars is a single integer
         const s = parseInt(record.stars)
         if ([3, 4, 5, 6].includes(s)) {
-          rows.push({ stars: s, created_at: record.created_at })
+          rows.push({ stars: s, created_at: String(record.created_at || '').slice(0, 10) || undefined })
         }
       }
     }
@@ -211,7 +211,7 @@ async function handleImport(e) {
 }
 
 function exportData() {
-  api('/api/records?limit=99999')
+  api('/api/records/export')
     .then(r => r.json())
     .then(data => {
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })

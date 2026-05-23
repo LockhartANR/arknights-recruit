@@ -80,8 +80,10 @@ router.post('/batch', (req, res) => {
 
         let dateValue = null;
         if (created_at) {
-          if (/^\d{4}-\d{2}-\d{2}$/.test(created_at) && !isNaN(new Date(created_at).getTime())) {
-            dateValue = created_at + ' 00:00:00';
+          // Accept both "YYYY-MM-DD" and "YYYY-MM-DD HH:mm:ss" formats
+          const dateStr = String(created_at).slice(0, 10);
+          if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr) && !isNaN(new Date(dateStr).getTime())) {
+            dateValue = dateStr + ' 00:00:00';
           } else {
             continue; // Invalid date, skip
           }
@@ -128,6 +130,18 @@ router.get('/', (req, res) => {
       'SELECT id, stars, count, operator_id, created_at FROM records WHERE user_id = ? ORDER BY id DESC LIMIT ?'
     ).all(req.user.id, limit);
 
+    res.json(records.map(r => ({ ...r, stars: parseInt(r.stars) })));
+  } catch (err) {
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
+// GET /api/records/export - export all records (no limit)
+router.get('/export', (req, res) => {
+  try {
+    const records = db.prepare(
+      'SELECT id, stars, count, operator_id, created_at FROM records WHERE user_id = ? ORDER BY id DESC'
+    ).all(req.user.id);
     res.json(records.map(r => ({ ...r, stars: parseInt(r.stars) })));
   } catch (err) {
     res.status(500).json({ error: '服务器错误' });
