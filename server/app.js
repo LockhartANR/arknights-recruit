@@ -12,11 +12,8 @@ export function createApp() {
 
   // Middleware
   app.use(helmet({
-    // Disable HTTPS-enforcing headers until domain + SSL is set up
-    // Without this, browsers may refuse to load assets over plain HTTP
-    strictTransportSecurity: false,
-    crossOriginOpenerPolicy: false,
-    originAgentCluster: false,
+    // CSP disabled for SPA compatibility (Vite may inline scripts/styles)
+    // Enable it after auditing with a proper nonce/hash policy if needed
     contentSecurityPolicy: false
   }));
   app.use(morgan('combined'));
