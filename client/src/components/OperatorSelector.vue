@@ -17,7 +17,7 @@
       <span class="trigger-arrow">▾</span>
     </button>
 
-    <div v-if="open" class="selector-dropdown">
+    <div v-if="open" ref="dropdownRef" class="selector-dropdown" :class="{ 'drop-up': dropUp }">
       <div class="dropdown-search">
         <input
           v-model="search"
@@ -62,7 +62,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useOperators } from '../composables/useOperators.js'
 
 const props = defineProps({
@@ -78,6 +78,8 @@ const { fetchOperators, getOperator, getOperators } = useOperators()
 const operators = ref([])
 const open = ref(false)
 const search = ref('')
+const dropUp = ref(false)
+const dropdownRef = ref(null)
 
 const selected = computed(() => getOperator(props.modelValue))
 
@@ -105,8 +107,17 @@ function onImgError(e) {
 }
 
 watch(open, async (val) => {
-  if (val && operators.value.length === 0) {
-    operators.value = await fetchOperators()
+  if (val) {
+    if (operators.value.length === 0) {
+      operators.value = await fetchOperators()
+    }
+    await nextTick()
+    if (dropdownRef.value) {
+      const rect = dropdownRef.value.getBoundingClientRect()
+      dropUp.value = rect.bottom > window.innerHeight
+    }
+  } else {
+    dropUp.value = false
   }
 })
 </script>
@@ -237,6 +248,13 @@ watch(open, async (val) => {
 
 .dropdown-clear:hover {
   background: #f0f0f0;
+}
+
+.selector-dropdown.drop-up {
+  top: auto;
+  bottom: 100%;
+  margin-top: 0;
+  margin-bottom: 4px;
 }
 
 .dropdown-list {
