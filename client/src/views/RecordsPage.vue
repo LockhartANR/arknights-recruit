@@ -103,20 +103,17 @@
                 </template>
               </td>
               <td>
-                <template v-if="editing?.id === r.id">
-                  <OperatorSelector v-model="editing.operator_id" :rarity="editing.stars" />
-                </template>
-                <template v-else>
-                  <template v-if="r.operator_id && getOperator(r.operator_id)">
-                    <img
-                      :src="getOperator(r.operator_id).avatar"
-                      class="op-avatar"
-                      @error="onImgError"
-                    />
-                    {{ getOperator(r.operator_id).name }}
-                  </template>
-                  <span v-else class="text-muted-inline">(未指定)</span>
-                </template>
+                <OperatorSelector
+                  v-if="editing?.id === r.id"
+                  v-model="editing.operator_id"
+                  :rarity="editing.stars"
+                />
+                <OperatorSelector
+                  v-else
+                  :model-value="r.operator_id"
+                  :rarity="r.stars"
+                  @update:model-value="(opId) => updateOperator(r.id, opId, r.stars)"
+                />
               </td>
               <td>
                 <template v-if="editing?.id === r.id">
@@ -285,6 +282,17 @@ async function deleteOne(id) {
   try {
     await api(`/api/records/${id}`, { method: 'DELETE' })
     selected.value = new Set()
+    await fetchRecords()
+  } catch { /* ignore */ }
+}
+
+async function updateOperator(id, operatorId, stars) {
+  try {
+    await api(`/api/records/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stars, operator_id: operatorId })
+    })
     await fetchRecords()
   } catch { /* ignore */ }
 }
