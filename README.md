@@ -12,7 +12,7 @@
 
 ```bash
 # 1. 克隆项目
-git clone <repo-url>
+git clone https://github.com/LockhartANR/arknights-recruit.git
 cd arknights-recruit
 
 # 2. 安装依赖
@@ -52,7 +52,7 @@ cd client && npm run test:e2e
 ```bash
 # 1. 服务器安装 Node.js 22+
 # 2. 克隆项目
-git clone <repo-url> && cd arknights-recruit
+git clone https://github.com/LockhartANR/arknights-recruit.git && cd arknights-recruit
 
 # 3. 安装依赖
 cd server && npm install
