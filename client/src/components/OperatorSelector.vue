@@ -111,6 +111,7 @@ watch(open, async (val) => {
   font-size: 13px;
   font-family: inherit;
   min-width: 160px;
+  max-width: 100%;
 }
 
 .selector-trigger:hover {
@@ -163,6 +164,7 @@ watch(open, async (val) => {
   border-radius: 10px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.12);
   width: 280px;
+  max-width: calc(100vw - 32px);
   max-height: 360px;
   display: flex;
   flex-direction: column;
@@ -249,5 +251,15 @@ watch(open, async (val) => {
   padding: 16px;
   color: #999;
   font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .selector-trigger {
+    min-width: 0;
+  }
+  .selector-dropdown {
+    left: auto;
+    right: 0;
+  }
 }
 </style>

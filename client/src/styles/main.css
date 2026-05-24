@@ -86,6 +86,7 @@ body {
   cursor: pointer;
   transition: all 0.2s;
   font-family: inherit;
+  touch-action: manipulation;
 }
 
 .btn-primary {
@@ -124,6 +125,7 @@ body {
 /* Table */
 .table-wrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 table {
@@ -198,6 +200,11 @@ tr:hover td {
   height: 360px;
 }
 
+/* Hamburger hidden on desktop */
+.hamburger {
+  display: none;
+}
+
 /* Stats grid: side-by-side on wide screens */
 .stats-grid {
   display: grid;
@@ -206,10 +213,50 @@ tr:hover td {
 }
 
 @media (max-width: 640px) {
+  .main {
+    padding: 16px 12px;
+  }
+
+  .card {
+    padding: 16px;
+    border-radius: 8px;
+  }
+
+  .card-title {
+    font-size: 16px;
+  }
+
+  .chart-box {
+    height: 260px;
+  }
+
   .stats-grid {
     grid-template-columns: 1fr;
   }
-  .navbar-brand {
-    font-size: 15px;
+
+  .flex-row {
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 6px 14px;
+    font-size: 13px;
+  }
+
+  table {
+    font-size: 13px;
+  }
+
+  th, td {
+    padding: 8px 10px;
+  }
+
+  /* NavBar mobile — global (override scoped specificity) */
+  .navbar-links,
+  .navbar-user {
+    display: none !important;
+  }
+  .hamburger {
+    display: flex;
   }
 }

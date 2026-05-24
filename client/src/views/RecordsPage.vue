@@ -46,15 +46,14 @@
                   <input
                     type="date"
                     v-model="editing.date"
-                    class="form-input"
-                    style="width:140px;padding:4px 8px"
+                    class="form-input edit-date"
                   />
                 </template>
                 <template v-else>{{ fmtDate(r.created_at) }}</template>
               </td>
               <td>
                 <template v-if="editing?.id === r.id">
-                  <select v-model="editing.stars" class="select" style="width:80px">
+                  <select v-model="editing.stars" class="select edit-stars">
                     <option v-for="s in [3,4,5,6]" :key="s" :value="s">{{ s }}★</option>
                   </select>
                 </template>
@@ -343,5 +342,25 @@ onMounted(() => {
 .text-muted-inline {
   color: #bbb;
   font-size: 12px;
+}
+
+.edit-date {
+  width: 140px;
+  padding: 4px 8px;
+}
+
+.edit-stars {
+  width: 80px;
+}
+
+@media (max-width: 640px) {
+  .edit-date {
+    width: 100%;
+    min-width: 110px;
+  }
+  .edit-stars {
+    width: 100%;
+    min-width: 60px;
+  }
 }
 </style>

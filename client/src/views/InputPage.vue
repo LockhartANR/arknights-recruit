@@ -21,7 +21,7 @@
     <div class="card">
       <div class="flex-between mb-8">
         <h2 class="card-title" style="margin-bottom:0">最近记录</h2>
-        <div style="display:flex;gap:8px">
+        <div class="flex-row action-buttons">
           <button
             class="btn btn-sm btn-default"
             @click="triggerImport"
