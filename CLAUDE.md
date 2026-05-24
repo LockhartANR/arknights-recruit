@@ -14,7 +14,7 @@ cd client && npm run dev
 # Production build + serve
 cd client && npx vite build && cd ../server && node index.js
 
-# Backend API tests (vitest + supertest, 33 cases)
+# Backend API tests (vitest + supertest, 43 cases)
 cd server && npm test
 
 # Frontend E2E tests (Playwright, 21 cases)
@@ -27,7 +27,7 @@ Full-stack multi-user app: Vue 3 SPA → Express REST API → SQLite. JWT auth (
 
 **Three pages**, routed via vue-router with auth guard:
 - `/` — InputPage: manual star entry (comma-separated 3-6), recent records, JSON export, CSV import
-- `/records` — RecordsPage: paginated table with inline edit (star + date), checkbox batch delete, delete all
+- `/records` — RecordsPage: paginated table with inline edit (star + date), filter bar (stars/operator/date range), checkbox batch delete, delete all
 - `/statistics` — StatisticsPage: year/month selector, ECharts pie charts + tables
 - `/login`, `/register` — auth pages (no guard)
 
@@ -38,7 +38,7 @@ Full-stack multi-user app: Vue 3 SPA → Express REST API → SQLite. JWT auth (
 | File | Key endpoints |
 |------|--------------|
 | `routes/auth.js` | `POST /api/auth/register`, `/login`, `GET /me` |
-| `routes/records.js` | `GET /` (paginated with `?offset=&limit=`), `POST /` (with optional `created_at`), `POST /batch` (CSV import), `PUT /:id` (edit stars + date), `DELETE /:id`, `POST /delete-batch` (`{ids:[...]}`), `DELETE /all`, `GET /stats`, `GET /stats/years` |
+| `routes/records.js` | `GET /` (paginated `?offset=&limit=` + filter `?stars=&operator_id=&date_from=&date_to=`), `POST /` (with optional `created_at`), `POST /batch` (CSV import), `PUT /:id` (edit stars + date), `DELETE /:id`, `POST /delete-batch` (`{ids:[...]}`), `DELETE /all`, `GET /stats`, `GET /stats/years` |
 
 All records routes are behind `authMiddleware` which verifies JWT and sets `req.user`. SQL queries filter by `user_id`.
 
@@ -52,3 +52,5 @@ records (id INTEGER PK, stars TEXT, count INTEGER, user_id INTEGER REFERENCES us
 **Testing**: Backend tests use vitest + supertest with in-memory DB. E2E tests use Playwright with two `webServer` entries (backend on 3000, Vite on 5173), `workers: 1` for serial execution. Test auth via `page.request.post` to backend + `page.addInitScript` for localStorage injection. `start-e2e.js` uses dynamic `import()` because ESM static imports are hoisted before env var setup.
 
 **Production**: Express serves `client/dist/` as static files with SPA fallback. `update.sh` handles `git pull → npm install → vite build → pm2 restart`. Helmet is configured with strictTransportSecurity/CSP/crossOriginOpenerPolicy disabled until HTTPS is set up.
+
+**Data sync** — `sync-operators.js` pulls operator data from [PRTS-fetcher](https://github.com/LockhartANR/PRTS-fetcher). Run `node --use-system-ca sync-operators.js` to fetch operators.json + avatars from GitHub; `node sync-operators.js --local` reads from `../prts-fetcher/output/` as fallback.

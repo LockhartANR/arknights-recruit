@@ -105,20 +105,49 @@ router.post('/batch', (req, res) => {
   }
 });
 
-// GET /api/records - list records (supports ?limit=20 for recent, or ?offset=N&limit=N for paginated)
+// GET /api/records - list records (supports ?offset=&limit=&stars=&operator_id=&date_from=&date_to=)
 router.get('/', (req, res) => {
   try {
     const offset = req.query.offset !== undefined ? parseInt(req.query.offset) : null;
     const limit = Math.min(parseInt(req.query.limit) || 20, 100);
 
+    // Build dynamic WHERE clause from filters
+    const conditions = ['user_id = ?'];
+    const params = [req.user.id];
+
+    if (req.query.stars) {
+      const stars = req.query.stars.split(',').filter(s => ['3', '4', '5', '6'].includes(s));
+      if (stars.length > 0) {
+        conditions.push(`stars IN (${stars.map(() => '?').join(',')})`);
+        params.push(...stars);
+      }
+    }
+
+    if (req.query.operator_id) {
+      conditions.push('operator_id = ?');
+      params.push(req.query.operator_id);
+    }
+
+    if (req.query.date_from) {
+      conditions.push('created_at >= ?');
+      params.push(req.query.date_from + ' 00:00:00');
+    }
+
+    if (req.query.date_to) {
+      conditions.push('created_at <= ?');
+      params.push(req.query.date_to + ' 23:59:59');
+    }
+
+    const whereClause = conditions.join(' AND ');
+
     if (offset !== null) {
       // Paginated mode: return { records, total }
       const totalRow = db.prepare(
-        'SELECT COUNT(*) as total FROM records WHERE user_id = ?'
-      ).get(req.user.id);
+        `SELECT COUNT(*) as total FROM records WHERE ${whereClause}`
+      ).get(...params);
       const records = db.prepare(
-        'SELECT id, stars, count, operator_id, created_at FROM records WHERE user_id = ? ORDER BY id DESC LIMIT ? OFFSET ?'
-      ).all(req.user.id, limit, offset);
+        `SELECT id, stars, count, operator_id, created_at FROM records WHERE ${whereClause} ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`
+      ).all(...params, limit, offset);
       return res.json({
         records: records.map(r => ({ ...r, stars: parseInt(r.stars) })),
         total: totalRow.total
@@ -127,8 +156,8 @@ router.get('/', (req, res) => {
 
     // Simple mode: return array (backwards compatible)
     const records = db.prepare(
-      'SELECT id, stars, count, operator_id, created_at FROM records WHERE user_id = ? ORDER BY id DESC LIMIT ?'
-    ).all(req.user.id, limit);
+      `SELECT id, stars, count, operator_id, created_at FROM records WHERE ${whereClause} ORDER BY created_at DESC, id DESC LIMIT ?`
+    ).all(...params, limit);
 
     res.json(records.map(r => ({ ...r, stars: parseInt(r.stars) })));
   } catch (err) {
@@ -140,7 +169,7 @@ router.get('/', (req, res) => {
 router.get('/export', (req, res) => {
   try {
     const records = db.prepare(
-      'SELECT id, stars, count, operator_id, created_at FROM records WHERE user_id = ? ORDER BY id DESC'
+      'SELECT id, stars, count, operator_id, created_at FROM records WHERE user_id = ? ORDER BY created_at DESC, id DESC'
     ).all(req.user.id);
     res.json(records.map(r => ({ ...r, stars: parseInt(r.stars) })));
   } catch (err) {

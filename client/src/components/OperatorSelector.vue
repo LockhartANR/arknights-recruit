@@ -49,6 +49,14 @@
       </div>
     </div>
 
+    <button
+      v-if="clearable && modelValue"
+      type="button"
+      class="selector-clear"
+      @click="select(null)"
+      title="清除"
+    >&times;</button>
+
     <div v-if="open" class="selector-backdrop" @click="open = false" />
   </div>
 </template>
@@ -58,7 +66,8 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useOperators } from '../composables/useOperators.js'
 
 const props = defineProps({
-  modelValue: { type: String, default: null }
+  modelValue: { type: String, default: null },
+  clearable: { type: Boolean, default: false }
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -97,6 +106,31 @@ watch(open, async (val) => {
 <style scoped>
 .operator-selector {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.selector-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: none;
+  color: #999;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 50%;
+  line-height: 1;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.selector-clear:hover {
+  color: #333;
+  background: #f0f0f0;
 }
 
 .selector-trigger {

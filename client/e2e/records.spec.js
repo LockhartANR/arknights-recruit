@@ -51,8 +51,9 @@ test.describe('Records CRUD', () => {
     await page.fill('input[placeholder*="逗号分隔"]', '6');
     await page.click('button:has-text("提交")');
     await expect(page.locator('.form-success')).toBeVisible();
-    await page.locator('button:has-text("删除")').first().click();
-    await expect(page.locator('table')).not.toContainText('6★');
+    const rowsBefore = await page.locator('table tbody tr').count();
+    await page.locator('table tbody tr:first-child button:has-text("删除")').click();
+    await expect(page.locator('table tbody tr')).toHaveCount(rowsBefore - 1);
   });
 });
 

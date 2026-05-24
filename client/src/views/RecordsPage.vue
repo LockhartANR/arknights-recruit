@@ -12,9 +12,50 @@
         >删除全部</button>
       </div>
 
+      <!-- Filter bar -->
+      <div v-if="total > 0 || hasFilters" class="filter-bar">
+        <div class="filter-item">
+          <select v-model="filters.stars" class="filter-select">
+            <option value="">全部星级</option>
+            <option value="3">3★</option>
+            <option value="4">4★</option>
+            <option value="5">5★</option>
+            <option value="6">6★</option>
+            <option value="5,6">5★+6★</option>
+          </select>
+        </div>
+        <div class="filter-item filter-operator">
+          <OperatorSelector v-model="filters.operator_id" :clearable="true" />
+        </div>
+        <div class="filter-item">
+          <input
+            type="date"
+            v-model="filters.date_from"
+            class="filter-date"
+            title="起始日期"
+          />
+          <span class="filter-date-sep">~</span>
+          <input
+            type="date"
+            v-model="filters.date_to"
+            class="filter-date"
+            title="结束日期"
+          />
+        </div>
+        <div class="filter-item">
+          <button
+            v-if="hasFilters"
+            class="btn btn-sm btn-default"
+            @click="clearFilters"
+          >清除筛选</button>
+        </div>
+      </div>
+
       <!-- Table -->
       <div v-if="loading" class="text-muted">加载中...</div>
-      <div v-else-if="records.length === 0" class="text-muted">暂无记录</div>
+      <div v-else-if="records.length === 0" class="text-muted">
+        {{ hasFilters ? '无匹配记录' : '暂无记录' }}
+      </div>
       <div v-else class="table-wrap">
         <table>
           <thead>
@@ -121,7 +162,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { api } from '../utils/api.js'
 import { useOperators } from '../composables/useOperators.js'
 import OperatorSelector from '../components/OperatorSelector.vue'
@@ -137,6 +178,17 @@ const editing = ref(null)
 const selected = ref(new Set())
 const showDeleteAllConfirm = ref(false)
 
+const filters = reactive({
+  stars: '',
+  operator_id: '',
+  date_from: '',
+  date_to: ''
+})
+
+const hasFilters = computed(() =>
+  filters.stars || filters.operator_id || filters.date_from || filters.date_to
+)
+
 const totalPages = computed(() => Math.ceil(total.value / pageSize))
 const allChecked = computed(() =>
   records.value.length > 0 && records.value.every(r => selected.value.has(r.id))
@@ -146,7 +198,12 @@ async function fetchRecords() {
   loading.value = true
   try {
     const offset = page.value * pageSize
-    const res = await api(`/api/records?offset=${offset}&limit=${pageSize}`)
+    const params = new URLSearchParams({ offset, limit: pageSize })
+    if (filters.stars) params.set('stars', filters.stars)
+    if (filters.operator_id) params.set('operator_id', filters.operator_id)
+    if (filters.date_from) params.set('date_from', filters.date_from)
+    if (filters.date_to) params.set('date_to', filters.date_to)
+    const res = await api(`/api/records?${params.toString()}`)
     const data = await res.json()
     records.value = data.records
     total.value = data.total
@@ -267,6 +324,24 @@ function onImgError(e) {
   e.target.style.display = 'none'
 }
 
+function clearFilters() {
+  filters.stars = ''
+  filters.operator_id = ''
+  filters.date_from = ''
+  filters.date_to = ''
+}
+
+// When any filter changes, reset to page 0 and re-fetch
+watch(
+  () => [filters.stars, filters.operator_id, filters.date_from, filters.date_to],
+  () => {
+    page.value = 0
+    selected.value = new Set()
+    editing.value = null
+    fetchRecords()
+  }
+)
+
 onMounted(() => {
   fetchOperators()
   fetchRecords()
@@ -339,6 +414,49 @@ onMounted(() => {
   background: #f0f0f0;
 }
 
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.filter-select {
+  padding: 5px 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  background: #fff;
+  color: #333;
+}
+
+.filter-date {
+  padding: 4px 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  width: 135px;
+}
+
+.filter-date-sep {
+  margin: 0 4px;
+  color: #999;
+  font-size: 13px;
+}
+
+.filter-item {
+  flex-shrink: 0;
+}
+
+.filter-operator {
+  min-width: 180px;
+}
+
 .text-muted-inline {
   color: #bbb;
   font-size: 12px;
@@ -361,6 +479,15 @@ onMounted(() => {
   .edit-stars {
     width: 100%;
     min-width: 60px;
+  }
+  .filter-bar {
+    gap: 6px;
+  }
+  .filter-date {
+    width: 120px;
+  }
+  .filter-operator {
+    min-width: 150px;
   }
 }
 </style>

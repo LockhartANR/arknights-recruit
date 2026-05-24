@@ -45,6 +45,20 @@ cd server && npm test
 cd client && npm run test:e2e
 ```
 
+## 干员数据同步
+
+干员数据来自 [PRTS-fetcher](https://github.com/LockhartANR/PRTS-fetcher)，仓库已内置 431 条干员数据。当上游数据更新时，运行同步脚本：
+
+```bash
+# 从 GitHub 拉取最新数据
+node --use-system-ca sync-operators.js
+
+# 或从本地 ../prts-fetcher/output/ 读取（降级模式）
+node sync-operators.js --local
+```
+
+脚本会自动更新 `client/public/operators.json` 和 `client/public/operators/*.png`，前端无需改动。
+
 ## 部署到服务器
 
 ### 方式一：Express 直接对外（简单）
@@ -122,7 +136,7 @@ client/              Vue 3 SPA
       LoginPage.vue      登录
       RegisterPage.vue   注册
       InputPage.vue      数据录入（星级 + 干员选择 + 批量导入）
-      RecordsPage.vue    记录管理（分页、行内编辑、批量删除）
+      RecordsPage.vue    记录管理（分页、筛选、行内编辑、批量删除）
       StatisticsPage.vue 统计图表（按年/月筛选）
     stores/
       auth.js            Pinia 认证状态管理
@@ -139,8 +153,10 @@ client/              Vue 3 SPA
       useStats.js      统计数据获取
       useOperators.js  干员数据获取
   public/
-    operators.json     干员数据库
+    operators.json     干员数据库（431 条）
+    operators/         干员头像（431 个 PNG）
 nginx.conf            Nginx 反向代理配置模板
+sync-operators.js     干员数据同步脚本（从 PRTS-fetcher 拉取）
 update.sh             一键更新部署脚本
 ```
 
