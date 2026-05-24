@@ -83,8 +83,9 @@ const selected = computed(() => getOperator(props.modelValue))
 
 const filtered = computed(() => {
   let list = operators.value
-  if (props.rarity) {
-    list = list.filter(op => op.rarity === props.rarity)
+  if (props.rarity != null) {
+    const r = Number(props.rarity)
+    list = list.filter(op => Number(op.rarity) === r)
   }
   const q = search.value.trim().toLowerCase()
   if (q) {
