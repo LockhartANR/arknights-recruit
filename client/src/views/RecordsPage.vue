@@ -104,7 +104,7 @@
               </td>
               <td>
                 <template v-if="editing?.id === r.id">
-                  <OperatorSelector v-model="editing.operator_id" />
+                  <OperatorSelector v-model="editing.operator_id" :rarity="editing.stars" />
                 </template>
                 <template v-else>
                   <template v-if="r.operator_id && getOperator(r.operator_id)">

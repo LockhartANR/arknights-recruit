@@ -67,7 +67,8 @@ import { useOperators } from '../composables/useOperators.js'
 
 const props = defineProps({
   modelValue: { type: String, default: null },
-  clearable: { type: Boolean, default: false }
+  clearable: { type: Boolean, default: false },
+  rarity: { type: Number, default: null }
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -81,9 +82,15 @@ const search = ref('')
 const selected = computed(() => getOperator(props.modelValue))
 
 const filtered = computed(() => {
-  if (!search.value.trim()) return operators.value
+  let list = operators.value
+  if (props.rarity) {
+    list = list.filter(op => op.rarity === props.rarity)
+  }
   const q = search.value.trim().toLowerCase()
-  return operators.value.filter(op => op.name.toLowerCase().includes(q))
+  if (q) {
+    list = list.filter(op => op.name.toLowerCase().includes(q))
+  }
+  return list
 })
 
 function select(id) {

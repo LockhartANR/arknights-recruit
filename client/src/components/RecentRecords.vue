@@ -17,15 +17,11 @@
             <td>{{ formatTime(r.created_at) }}</td>
             <td><span :class="'star-' + r.stars">{{ r.stars }}★</span></td>
             <td>
-              <template v-if="r.operator_id && getOperator(r.operator_id)">
-                <img
-                  :src="getOperator(r.operator_id).avatar"
-                  class="op-avatar"
-                  @error="onImgError"
-                />
-                {{ getOperator(r.operator_id).name }}
-              </template>
-              <span v-else class="text-muted-inline">(未指定)</span>
+              <OperatorSelector
+                :model-value="r.operator_id"
+                :rarity="r.stars"
+                @update:model-value="(opId) => $emit('update-operator', r.id, opId)"
+              />
             </td>
             <td>
               <button class="btn btn-danger btn-sm" @click="$emit('delete', r.id)">删除</button>
@@ -38,20 +34,13 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
-import { useOperators } from '../composables/useOperators.js'
+import OperatorSelector from './OperatorSelector.vue'
 
 defineProps({
   records: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false }
 })
-defineEmits(['delete'])
-
-const { fetchOperators, getOperator } = useOperators()
-
-onMounted(() => {
-  fetchOperators()
-})
+defineEmits(['delete', 'update-operator'])
 
 function formatTime(t) {
   if (!t) return ''

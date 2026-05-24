@@ -52,6 +52,7 @@
         :records="records"
         :loading="loading"
         @delete="deleteRecord"
+        @update-operator="updateOperator"
       />
     </div>
   </div>
@@ -140,6 +141,21 @@ async function deleteRecord(id) {
     await fetchRecords()
   } catch {
     errorMsg.value = '删除失败'
+  }
+}
+
+async function updateOperator(id, operatorId) {
+  const record = records.value.find(r => r.id === id)
+  if (!record) return
+  try {
+    await api(`/api/records/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ stars: record.stars, operator_id: operatorId })
+    })
+    await fetchRecords()
+  } catch {
+    errorMsg.value = '更新失败'
   }
 }
 
