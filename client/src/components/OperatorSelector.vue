@@ -1,6 +1,7 @@
 <template>
   <div class="operator-selector">
     <button
+      ref="triggerRef"
       type="button"
       class="selector-trigger"
       :class="{ placeholder: !selected }"
@@ -17,7 +18,7 @@
       <span class="trigger-arrow">▾</span>
     </button>
 
-    <div v-if="open" ref="dropdownRef" class="selector-dropdown" :class="{ 'drop-up': dropUp }">
+    <div v-if="open" ref="dropdownRef" class="selector-dropdown" :class="{ 'drop-up': dropUp }" :style="{ maxHeight: maxHeight + 'px' }">
       <div class="dropdown-search">
         <input
           v-model="search"
@@ -79,7 +80,9 @@ const operators = ref([])
 const open = ref(false)
 const search = ref('')
 const dropUp = ref(false)
+const maxHeight = ref(360)
 const dropdownRef = ref(null)
+const triggerRef = ref(null)
 
 const selected = computed(() => getOperator(props.modelValue))
 
@@ -112,12 +115,16 @@ watch(open, async (val) => {
       operators.value = await fetchOperators()
     }
     await nextTick()
-    if (dropdownRef.value) {
-      const rect = dropdownRef.value.getBoundingClientRect()
-      dropUp.value = rect.bottom > window.innerHeight
-    }
+    if (!triggerRef.value) return
+    const triggerRect = triggerRef.value.getBoundingClientRect()
+    const spaceBelow = window.innerHeight - triggerRect.bottom - 8
+    const spaceAbove = triggerRect.top - 8
+    dropUp.value = spaceBelow < 200 && spaceAbove > spaceBelow
+    const available = dropUp.value ? spaceAbove : spaceBelow
+    maxHeight.value = Math.max(Math.min(available, 360), 120)
   } else {
     dropUp.value = false
+    maxHeight.value = 360
   }
 })
 </script>
