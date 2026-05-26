@@ -116,7 +116,7 @@ router.get('/', (req, res) => {
     const params = [req.user.id];
 
     if (req.query.stars) {
-      const stars = req.query.stars.split(',').filter(s => ['1', '2', '3', '4', '5', '6'].includes(s));
+      const stars = req.query.stars.split(/[,\s，]+/).filter(s => ['1', '2', '3', '4', '5', '6'].includes(s));
       if (stars.length > 0) {
         conditions.push(`stars IN (${stars.map(() => '?').join(',')})`);
         params.push(...stars);

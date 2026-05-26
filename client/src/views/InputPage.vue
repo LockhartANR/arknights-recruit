@@ -3,12 +3,12 @@
     <div class="card">
       <h2 class="card-title">公招结果录入</h2>
       <div class="form-group">
-        <label class="form-label">输入星级（逗号分隔，如：1,3,4,5,6）</label>
+        <label class="form-label">输入星级（逗号或空格分隔，如：1,3 4 5，6）</label>
         <div class="flex-row">
           <input
             v-model="inputText"
             class="form-input"
-            placeholder="请输入星级，用逗号分隔，例如：1,3,4,5,6"
+            placeholder="请输入星级，逗号或空格分隔，例如：1,3 4 5，6"
             @keyup.enter="submit"
           />
           <button class="btn btn-primary" @click="submit">提交</button>
@@ -88,7 +88,7 @@ async function fetchRecords() {
 function validate(input) {
   if (!input.trim()) return '输入不能为空'
 
-  const parts = input.split(',').map(s => s.trim()).filter(s => s !== '')
+  const parts = input.split(/[,\s，]+/).filter(s => s !== '')
   if (parts.length === 0) return '输入不能为空'
 
   const stars = parts.map(Number)
@@ -109,7 +109,7 @@ async function submit() {
     return
   }
 
-  const parts = inputText.value.split(',').map(s => s.trim()).filter(s => s !== '')
+  const parts = inputText.value.split(/[,\s，]+/).filter(s => s !== '')
   const stars = parts.map(Number)
 
   // Submit each star as an individual record via batch endpoint
