@@ -13,6 +13,14 @@
           />
           <button class="btn btn-primary" @click="submit">提交</button>
         </div>
+        <div class="star-buttons">
+          <button
+            v-for="s in [1,2,3,4,5,6]"
+            :key="s"
+            :class="['btn-star', `star-${s}`]"
+            @click="appendStar(s)"
+          >{{ s }}★</button>
+        </div>
         <p v-if="errorMsg" class="form-error">{{ errorMsg }}</p>
         <p v-if="successMsg" class="form-success">{{ successMsg }}</p>
       </div>
@@ -70,6 +78,11 @@ const successMsg = ref('')
 const records = ref([])
 const loading = ref(false)
 const showCsvImport = ref(false)
+
+function appendStar(n) {
+  const current = inputText.value.trim()
+  inputText.value = current ? current + ',' + n : String(n)
+}
 
 function onCsvImported() {
   fetchRecords()
@@ -248,5 +261,32 @@ onMounted(fetchRecords)
   color: #67c23a;
   font-size: 13px;
   margin-top: 6px;
+}
+
+.star-buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.btn-star {
+  width: 44px;
+  height: 36px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-star:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.btn-star:active {
+  transform: translateY(0);
 }
 </style>

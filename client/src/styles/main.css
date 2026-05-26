@@ -189,6 +189,8 @@ tr:hover td {
 }
 
 /* Star colors */
+.star-1 { color: #b0b0b0; }
+.star-2 { color: #67c23a; }
 .star-3 { color: #909399; }
 .star-4 { color: #409EFF; }
 .star-5 { color: #E6A23C; }
