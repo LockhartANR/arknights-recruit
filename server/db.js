@@ -68,7 +68,7 @@ if (legacyRows.length > 0) {
       }
       if (!Array.isArray(starsArray)) continue;
       for (const star of starsArray) {
-        if ([3, 4, 5, 6].includes(star)) {
+        if ([1, 2, 3, 4, 5, 6].includes(star)) {
           if (row.created_at) {
             insertWithDate.run(String(star), row.user_id, row.created_at);
           } else {

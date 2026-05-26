@@ -35,9 +35,9 @@ test.describe('Records CRUD', () => {
 
   test('shows error for invalid star values', async ({ page }) => {
     await loginViaApi(page, 'rec_b');
-    await page.fill('input[placeholder*="逗号分隔"]', '1,2,7');
+    await page.fill('input[placeholder*="逗号分隔"]', '0,7,8');
     await page.click('button:has-text("提交")');
-    await expect(page.locator('.form-error')).toContainText('3、4、5、6');
+    await expect(page.locator('.form-error')).toContainText('1-6');
   });
 
   test('shows error for empty input', async ({ page }) => {

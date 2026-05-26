@@ -174,7 +174,7 @@ users (
 
 records (
   id INTEGER PRIMARY KEY,
-  stars TEXT,            -- 单个星级 "3" / "4" / "5" / "6"
+  stars TEXT,            -- 单个星级 "1" / "2" / "3" / "4" / "5" / "6"
   count INTEGER,          -- 固定为 1
   operator_id TEXT,       -- 干员 ID，对应 operators.json
   user_id INTEGER REFERENCES users(id),

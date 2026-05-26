@@ -3,12 +3,12 @@
     <div class="card">
       <h2 class="card-title">公招结果录入</h2>
       <div class="form-group">
-        <label class="form-label">输入星级（逗号分隔，如：4,3,5,6,4,3）</label>
+        <label class="form-label">输入星级（逗号分隔，如：1,3,4,5,6）</label>
         <div class="flex-row">
           <input
             v-model="inputText"
             class="form-input"
-            placeholder="请输入星级，用逗号分隔，例如：4,3,5,6,4,3"
+            placeholder="请输入星级，用逗号分隔，例如：1,3,4,5,6"
             @keyup.enter="submit"
           />
           <button class="btn btn-primary" @click="submit">提交</button>
@@ -93,7 +93,7 @@ function validate(input) {
 
   const stars = parts.map(Number)
   if (stars.some(isNaN)) return '请输入有效的数字'
-  if (stars.some(n => ![3, 4, 5, 6].includes(n))) return '星级只能是 3、4、5、6'
+  if (stars.some(n => ![1, 2, 3, 4, 5, 6].includes(n))) return '星级只能是 1-6'
   if (stars.some(n => !Number.isInteger(n))) return '请输入整数'
 
   return null
@@ -185,14 +185,14 @@ async function handleImport(e) {
       if (Array.isArray(record.stars)) {
         // Old format: stars is an array like [4, 3, 5] -> split into individual rows
         for (const s of record.stars) {
-          if ([3, 4, 5, 6].includes(s)) {
+          if ([1, 2, 3, 4, 5, 6].includes(s)) {
             rows.push({ stars: s, created_at: String(record.created_at || '').slice(0, 10) || undefined })
           }
         }
       } else {
         // New format: stars is a single integer
         const s = parseInt(record.stars)
-        if ([3, 4, 5, 6].includes(s)) {
+        if ([1, 2, 3, 4, 5, 6].includes(s)) {
           rows.push({ stars: s, created_at: String(record.created_at || '').slice(0, 10) || undefined })
         }
       }

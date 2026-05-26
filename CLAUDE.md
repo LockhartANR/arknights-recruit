@@ -26,7 +26,7 @@ cd client && npm run test:e2e
 Full-stack multi-user app: Vue 3 SPA → Express REST API → SQLite. JWT auth (jsonwebtoken + bcryptjs) with Pinia state management.
 
 **Three pages**, routed via vue-router with auth guard:
-- `/` — InputPage: manual star entry (comma-separated 3-6), recent records, JSON export, CSV import
+- `/` — InputPage: manual star entry (comma-separated 1-6), recent records, JSON export, CSV import
 - `/records` — RecordsPage: paginated table with inline edit (star + date), filter bar (stars/operator/date range), checkbox batch delete, delete all
 - `/statistics` — StatisticsPage: year/month selector, ECharts pie charts + tables
 - `/login`, `/register` — auth pages (no guard)

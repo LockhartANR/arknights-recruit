@@ -88,7 +88,7 @@
 
     <!-- Warnings -->
     <div v-if="skippedCount > 0" class="csv-step">
-      <p class="csv-warn">已跳过 {{ skippedCount }} 条无效数据（星级非 3-6 或日期不合法）</p>
+      <p class="csv-warn">已跳过 {{ skippedCount }} 条无效数据（星级非 1-6 或日期不合法）</p>
     </div>
   </div>
 </template>
@@ -139,7 +139,7 @@ const csvValidRows = computed(() => {
 
     if (isNaN(year) || isNaN(month) || isNaN(day) || isNaN(star)) continue
     if (month < 1 || month > 12 || day < 1 || day > 31) continue
-    if (![3, 4, 5, 6].includes(star)) continue
+    if (![1, 2, 3, 4, 5, 6].includes(star)) continue
 
     result.push({
       star,
@@ -153,7 +153,7 @@ const csvValidRows = computed(() => {
 const jsonValidRows = computed(() => {
   return jsonRecords.value.filter(r => {
     const star = parseInt(r.stars)
-    if (![3, 4, 5, 6].includes(star)) return false
+    if (![1, 2, 3, 4, 5, 6].includes(star)) return false
     if (r.created_at && !/^\d{4}-\d{2}-\d{2}/.test(r.created_at)) {
       // Also accept "YYYY-MM-DD HH:mm:ss" format
       if (!/^\d{4}-\d{2}-\d{2}/.test(String(r.created_at).slice(0, 10))) return false

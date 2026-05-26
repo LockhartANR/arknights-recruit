@@ -17,6 +17,8 @@
         <div class="filter-item">
           <select v-model="filters.stars" class="filter-select">
             <option value="">全部星级</option>
+            <option value="1">1★</option>
+            <option value="2">2★</option>
             <option value="3">3★</option>
             <option value="4">4★</option>
             <option value="5">5★</option>
@@ -95,7 +97,7 @@
               <td>
                 <template v-if="editing?.id === r.id">
                   <select v-model="editing.stars" class="select edit-stars">
-                    <option v-for="s in [3,4,5,6]" :key="s" :value="s">{{ s }}★</option>
+                    <option v-for="s in [1,2,3,4,5,6]" :key="s" :value="s">{{ s }}★</option>
                   </select>
                 </template>
                 <template v-else>

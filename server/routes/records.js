@@ -17,8 +17,8 @@ router.post('/', (req, res) => {
     }
 
     const star = parseInt(stars);
-    if (![3, 4, 5, 6].includes(star)) {
-      return res.status(400).json({ error: '星级只能是 3, 4, 5, 6' });
+    if (![1, 2, 3, 4, 5, 6].includes(star)) {
+      return res.status(400).json({ error: '星级只能是 1-6' });
     }
 
     // Validate optional operator_id
@@ -76,7 +76,7 @@ router.post('/batch', (req, res) => {
 
         if (stars === undefined || stars === null) continue;
         const star = parseInt(stars);
-        if (![3, 4, 5, 6].includes(star)) continue;
+        if (![1, 2, 3, 4, 5, 6].includes(star)) continue;
 
         let dateValue = null;
         if (created_at) {
@@ -116,7 +116,7 @@ router.get('/', (req, res) => {
     const params = [req.user.id];
 
     if (req.query.stars) {
-      const stars = req.query.stars.split(',').filter(s => ['3', '4', '5', '6'].includes(s));
+      const stars = req.query.stars.split(',').filter(s => ['1', '2', '3', '4', '5', '6'].includes(s));
       if (stars.length > 0) {
         conditions.push(`stars IN (${stars.map(() => '?').join(',')})`);
         params.push(...stars);
@@ -214,8 +214,8 @@ router.put('/:id', (req, res) => {
     }
 
     const star = parseInt(stars);
-    if (![3, 4, 5, 6].includes(star)) {
-      return res.status(400).json({ error: '星级只能是 3, 4, 5, 6' });
+    if (![1, 2, 3, 4, 5, 6].includes(star)) {
+      return res.status(400).json({ error: '星级只能是 1-6' });
     }
 
     let dateValue = null;
@@ -320,7 +320,7 @@ router.get('/stats', (req, res) => {
     }
 
     // Build star counts
-    const starCounts = { 3: 0, 4: 0, 5: 0, 6: 0 };
+    const starCounts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
     for (const row of rows) {
       const star = parseInt(row.stars);
       if (starCounts.hasOwnProperty(star)) {
@@ -330,7 +330,7 @@ router.get('/stats', (req, res) => {
 
     const total = Object.values(starCounts).reduce((a, b) => a + b, 0);
 
-    const breakdown = [3, 4, 5, 6].map(star => ({
+    const breakdown = [1, 2, 3, 4, 5, 6].map(star => ({
       star,
       count: starCounts[star],
       percentage: total > 0 ? Math.round((starCounts[star] / total) * 1000) / 10 : 0

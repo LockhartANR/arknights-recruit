@@ -503,7 +503,7 @@ describe('Stats API', () => {
 
       expect(res.status).toBe(200);
       expect(res.body.total).toBe(6); // 3,4,5,6,3,3 = 6 total
-      expect(res.body.breakdown).toHaveLength(4);
+      expect(res.body.breakdown).toHaveLength(6);
 
       // Star 3 should have count 3
       const star3 = res.body.breakdown.find(b => b.star === 3);
