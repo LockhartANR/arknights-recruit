@@ -1,5 +1,6 @@
 <template>
   <nav class="navbar">
+    <a href="/" class="navbar-home">首页</a>
     <div class="navbar-brand">明日方舟公招统计</div>
     <div class="navbar-links">
       <router-link to="/" class="nav-link" active-class="active" exact>录入</router-link>
@@ -25,6 +26,8 @@
   <Teleport to="body">
     <div v-if="menuOpen" class="mobile-menu-overlay" @click="menuOpen = false" />
     <div v-if="menuOpen" class="mobile-menu">
+      <a href="/" class="mobile-nav-link" @click="menuOpen = false">首页</a>
+      <div class="mobile-menu-divider" />
       <router-link to="/" class="mobile-nav-link" active-class="active" exact @click="menuOpen = false">录入</router-link>
       <router-link to="/records" class="mobile-nav-link" active-class="active" @click="menuOpen = false">记录</router-link>
       <router-link to="/statistics" class="mobile-nav-link" active-class="active" @click="menuOpen = false">统计</router-link>
@@ -81,6 +84,21 @@ watch(() => route.path, () => {
   gap: 8px;
   margin-left: auto;
   margin-right: 20px;
+}
+.navbar-home {
+  color: rgba(255,255,255,0.65);
+  text-decoration: none;
+  font-size: 13px;
+  margin-right: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+.navbar-home:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.35);
 }
 .nav-link {
   color: rgba(255,255,255,0.7);
