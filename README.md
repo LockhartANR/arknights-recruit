@@ -84,6 +84,7 @@ cp .env.example .env
 #   PORT=3000
 #   JWT_SECRET=<openssl rand -hex 32 生成>
 #   CORS_ORIGIN=https://ark.lockhart.ren
+#   INVITE_CODE=<设置注册邀请码>
 
 # 5. 构建前端
 cd ../client && npx vite build
