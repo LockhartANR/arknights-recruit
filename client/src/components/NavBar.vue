@@ -1,6 +1,6 @@
 <template>
   <nav class="navbar">
-    <a href="/" class="navbar-home">首页</a>
+    <a href="https://lockhart.ren" class="navbar-home">首页</a>
     <div class="navbar-brand">明日方舟公招统计</div>
     <div class="navbar-links">
       <router-link to="/" class="nav-link" active-class="active" exact>录入</router-link>
@@ -26,7 +26,7 @@
   <Teleport to="body">
     <div v-if="menuOpen" class="mobile-menu-overlay" @click="menuOpen = false" />
     <div v-if="menuOpen" class="mobile-menu">
-      <a href="/" class="mobile-nav-link" @click="menuOpen = false">首页</a>
+      <a href="https://lockhart.ren" class="mobile-nav-link" @click="menuOpen = false">首页</a>
       <div class="mobile-menu-divider" />
       <router-link to="/" class="mobile-nav-link" active-class="active" exact @click="menuOpen = false">录入</router-link>
       <router-link to="/records" class="mobile-nav-link" active-class="active" @click="menuOpen = false">记录</router-link>

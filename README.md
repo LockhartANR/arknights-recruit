@@ -2,7 +2,7 @@
 
 多用户 Web 应用，用于记录和统计《明日方舟》公开招募的星级与干员分布。
 
-部署于 [lockhart.ren/arknights/](https://lockhart.ren/arknights/)，与以下姊妹项目配合使用：
+部署于 [ark.lockhart.ren](https://ark.lockhart.ren)，与以下姊妹项目配合使用：
 
 - [my-landing](https://github.com/LockhartANR/my-landing) — 网站首页，导航入口
 - 博客（待建） — 技术博客
@@ -83,7 +83,7 @@ cp .env.example .env
 # 编辑 .env：
 #   PORT=3000
 #   JWT_SECRET=<openssl rand -hex 32 生成>
-#   CORS_ORIGIN=http://你的域名或IP:3000
+#   CORS_ORIGIN=https://ark.lockhart.ren
 
 # 5. 构建前端
 cd ../client && npx vite build
@@ -103,7 +103,7 @@ sudo ufw allow 3000
 
 ### 方式二：Nginx 反向代理（推荐生产环境）
 
-项目根目录下的 `nginx.conf` 已配好多站点路由：`/`（首页）、`/arknights/`（本应用）、`/blog/`（博客），`/api` 代理到 Express。直接部署即可：
+项目根目录下的 `nginx.conf` 已配好子域名路由：`lockhart.ren`（首页）、`ark.lockhart.ren`（本应用）、`blog.lockhart.ren`（博客），`/api` 代理到 Express。直接部署即可：
 
 ```bash
 # 1. 确保已部署首页（my-landing）和博客占位，路径如下：
@@ -162,7 +162,7 @@ client/              Vue 3 SPA
   public/
     operators.json     干员数据库（431 条）
     operators/         干员头像（431 个 PNG）
-nginx.conf            多站点 Nginx 路由配置（/ + /arknights/ + /blog/）
+nginx.conf            子域名 Nginx 路由配置（lockhart.ren / ark.lockhart.ren / blog.lockhart.ren）
 sync-operators.js     干员数据同步脚本（从 PRTS-fetcher 拉取）
 update.sh             一键更新部署脚本
 ```
