@@ -2,6 +2,11 @@
 
 多用户 Web 应用，用于记录和统计《明日方舟》公开招募的星级与干员分布。
 
+部署于 [lockhart.ren/arknights/](https://lockhart.ren/arknights/)，与以下姊妹项目配合使用：
+
+- [my-landing](https://github.com/LockhartANR/my-landing) — 网站首页，导航入口
+- 博客（待建） — 技术博客
+
 ## 技术栈
 
 - **前端**：Vue 3 + Vue Router + Pinia + ECharts
@@ -98,13 +103,15 @@ sudo ufw allow 3000
 
 ### 方式二：Nginx 反向代理（推荐生产环境）
 
-在上方部署步骤的基础上，使用项目根目录下的 `nginx.conf` 配置反向代理：
+项目根目录下的 `nginx.conf` 已配好多站点路由：`/`（首页）、`/arknights/`（本应用）、`/blog/`（博客），`/api` 代理到 Express。直接部署即可：
 
 ```bash
-# 1. 编辑 nginx.conf，替换域名和静态文件路径
+# 1. 确保已部署首页（my-landing）和博客占位，路径如下：
+#    /home/arknights/landing/dist/       — 首页
+#    /home/arknights/blog/public/        — 博客占位
 # 2. 部署配置
 sudo cp nginx.conf /etc/nginx/sites-available/arknights
-sudo ln -s /etc/nginx/sites-available/arknights /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/arknights /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
@@ -155,7 +162,7 @@ client/              Vue 3 SPA
   public/
     operators.json     干员数据库（431 条）
     operators/         干员头像（431 个 PNG）
-nginx.conf            Nginx 反向代理配置模板
+nginx.conf            多站点 Nginx 路由配置（/ + /arknights/ + /blog/）
 sync-operators.js     干员数据同步脚本（从 PRTS-fetcher 拉取）
 update.sh             一键更新部署脚本
 ```
