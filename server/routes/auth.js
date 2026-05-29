@@ -9,10 +9,13 @@ const router = Router();
 // POST /api/auth/register
 router.post('/register', (req, res) => {
   try {
-    const { username, password } = req.body;
+    const { username, password, inviteCode } = req.body;
 
     if (!username || !password) {
       return res.status(400).json({ error: '用户名和密码不能为空' });
+    }
+    if (process.env.INVITE_CODE && inviteCode !== process.env.INVITE_CODE) {
+      return res.status(400).json({ error: '邀请码错误' });
     }
     if (typeof username !== 'string' || !/^[\w\u4e00-\u9fff]{3,20}$/.test(username)) {
       return res.status(400).json({ error: '用户名需为3-20位，仅支持字母、数字、下划线和中文' });

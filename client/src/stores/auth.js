@@ -25,11 +25,11 @@ export const useAuthStore = defineStore('auth', {
       localStorage.setItem('user', JSON.stringify(this.user));
     },
 
-    async register(username, password) {
+    async register(username, password, inviteCode) {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username, password, inviteCode })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || '注册失败');

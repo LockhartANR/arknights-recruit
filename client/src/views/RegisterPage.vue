@@ -32,6 +32,14 @@
             autocomplete="new-password"
           />
         </div>
+        <div class="form-group">
+          <label class="form-label">邀请码</label>
+          <input
+            v-model="inviteCode"
+            class="form-input"
+            placeholder="输入邀请码"
+          />
+        </div>
         <p v-if="errorMsg" class="form-error">{{ errorMsg }}</p>
         <button class="btn btn-primary btn-block" type="submit" :disabled="loading">
           {{ loading ? '注册中...' : '注册' }}
@@ -55,6 +63,7 @@ const auth = useAuthStore();
 const username = ref('');
 const password = ref('');
 const confirmPassword = ref('');
+const inviteCode = ref('');
 const errorMsg = ref('');
 const loading = ref(false);
 
@@ -63,6 +72,10 @@ async function handleRegister() {
 
   if (!username.value.trim() || !password.value) {
     errorMsg.value = '请输入用户名和密码';
+    return;
+  }
+  if (!inviteCode.value.trim()) {
+    errorMsg.value = '请输入邀请码';
     return;
   }
   if (!/^[\w\u4e00-\u9fff]{3,20}$/.test(username.value.trim())) {
@@ -80,7 +93,7 @@ async function handleRegister() {
 
   loading.value = true;
   try {
-    await auth.register(username.value.trim(), password.value);
+    await auth.register(username.value.trim(), password.value, inviteCode.value.trim());
     await auth.login(username.value.trim(), password.value);
     router.push('/');
   } catch (err) {
