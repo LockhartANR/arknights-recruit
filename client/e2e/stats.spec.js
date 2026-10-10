@@ -46,8 +46,30 @@ test.describe('Statistics Page', () => {
     await page.waitForSelector('.select', { timeout: 5000 });
     await expect(page.locator('.select')).toHaveCount(2);
 
-    const hasContent = await page.locator('.chart-box, canvas, table').first().isVisible().catch(() => false);
-    expect(hasContent).toBeTruthy();
+    // Assert the chart actually rendered, not merely that *something* in the card is
+    // visible. The previous version was
+    //   locator('.chart-box, canvas, table').first().isVisible()
+    // which the table alone satisfies - a blank chart still passed. That is how a
+    // missing ECharts registration could reach production unnoticed.
+    const canvas = page.locator('.chart-box canvas');
+    await expect(canvas).toBeVisible({ timeout: 5000 });
+
+    // A real pie draws geometry; an empty one has a blank canvas of the same size.
+    const geometry = await page.locator('.chart-box canvas').first().evaluate((el) => {
+      const ctx = el.getContext('2d');
+      if (!ctx) return { pixels: 0, note: 'no 2d context' };
+      const { data } = ctx.getImageData(0, 0, el.width, el.height);
+      let painted = 0;
+      for (let i = 3; i < data.length; i += 4) {
+        if (data[i] !== 0) painted++;
+      }
+      return { pixels: painted, width: el.width, height: el.height };
+    });
+    expect(geometry.pixels, `chart canvas has ${geometry.pixels} painted pixels (blank chart?)`)
+      .toBeGreaterThan(1000);
+
+    // The pie labels carry the star glyph, so the legend/labels must be present.
+    await expect(page.locator('.chart-box')).toContainText('3★');
   });
 
   test('requires auth', async ({ page }) => {

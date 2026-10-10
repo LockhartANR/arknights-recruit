@@ -51,6 +51,8 @@ const chartRef = ref(null)
 let chart = null
 
 const STAR_COLORS = {
+  1: '#C8CDD4',
+  2: '#A9B2BE',
   3: '#909399',
   4: '#409EFF',
   5: '#E6A23C',
