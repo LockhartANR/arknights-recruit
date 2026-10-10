@@ -104,14 +104,21 @@ sudo ufw allow 3000
 
 ### 方式二：Nginx 反向代理（推荐生产环境）
 
-项目根目录下的 `nginx.conf` 已配好子域名路由：`lockhart.ren`（首页）、`ark.lockhart.ren`（本应用）、`blog.lockhart.ren`（博客），`/api` 代理到 Express。直接部署即可：
+项目根目录下的 `nginx.conf` 是**线上 `/etc/nginx/sites-available/arknights` 的同步副本**，已配好四个子域名的路由：`lockhart.ren`（首页）、`ark.lockhart.ren`（本应用，`/api` 反代到 Express）、`blog.lockhart.ren`（博客）、`bangumi.lockhart.ren`（Bangumi 镜像）。
+
+> ⚠️ **该文件由 Certbot 共同管理**（`listen 443 ssl`、证书路径、80→443 重定向块均带 `managed by Certbot` 标记）。
+> 改站点配置请**直接在服务器上编辑线上文件**，改完再反哺回本文件；不要无脑地把本文件覆盖上去。
+> 覆盖前务必先比对：`sudo sha256sum /etc/nginx/sites-available/arknights`
 
 ```bash
 # 1. 确保已部署首页（my-landing）和博客占位，路径如下：
 #    /home/arknights/landing/dist/       — 首页
 #    /home/arknights/blog/public/        — 博客占位
-# 2. 部署配置
-sudo cp nginx.conf /etc/nginx/sites-available/arknights
+# 2. 改线上配置（推荐方式）
+sudo cp /etc/nginx/sites-available/arknights /etc/nginx/sites-available/arknights.bak
+sudoedit /etc/nginx/sites-available/arknights
+sudo nginx -t && sudo systemctl reload nginx
+# 3. 首次部署或确认本文件与线上一致时
 sudo ln -sf /etc/nginx/sites-available/arknights /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 ```
@@ -121,8 +128,13 @@ sudo nginx -t && sudo systemctl reload nginx
 ### 更新部署
 
 ```bash
-./update.sh   # 拉代码 → 装依赖 → 构建前端 → 重启服务 → 重载 Nginx
+./update.sh   # 备份数据库 → 拉代码 → 装依赖 → 原子构建前端 → 重启并健康检查
 ```
+
+`update.sh` 会在任一步失败时自动回滚到部署前的 commit 并重建、重启。两点注意：
+
+- 服务器上 `sudo` 需要密码，因此脚本会**打印告警并跳过 nginx 校验与重载**。若本次改动涉及 nginx，必须人工执行 `sudo nginx -t && sudo systemctl reload nginx`。
+- 部署前会强制备份数据库，备份失败则中止部署（脚本：`~/bin/backup-databases.py`，不在本仓库内）。
 
 ## 项目结构
 
