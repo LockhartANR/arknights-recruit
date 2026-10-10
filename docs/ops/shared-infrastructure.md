@@ -29,7 +29,9 @@
 | `lockhart.ren` / `www.lockhart.ren` | 个人首页 | nginx 静态文件 | `LockhartANR/my-landing` |
 | `ark.lockhart.ren` | 明日方舟公招统计 | nginx 静态 + `/api` 反代 `127.0.0.1:3000` | `LockhartANR/arknights-recruit` |
 | `blog.lockhart.ren` | Hexo 博客 | nginx 静态文件 | `LockhartANR/blog` |
-| `bangumi.lockhart.ren` | Bangumi 镜像 | nginx 反代 `127.0.0.1:8000` | `LockhartANR/bangumi-mirror` |
+| `bgm.lockhart.ren` | Bangumi 私人反代镜像（**需登录**） | nginx(认证) → Mirrox `127.0.0.1:3001` | `LockhartANR/bangumi-mirror` |
+| `*.bgm.lockhart.ren` | 同上，覆盖 api / lain / fast / next / doujin | 同一条通配路由 | 同上 |
+| `bangumi.lockhart.ren` | **已废弃**，返回 502（后端已移除，域名保留） | 残留 nginx 块 → 已停止的 `127.0.0.1:8000` | 同上 |
 
 **本地目录名与 GitHub 仓库名不一致的地方（容易搞错）**：
 
@@ -49,7 +51,12 @@
 ├── arknights-recruit/   Node + Express，pm2 进程 arknights-recruit，端口 3000
 ├── landing/             Vue 3 静态站，nginx 直接托管
 ├── blog/                Hexo 静态站，nginx 直接托管
-├── bangumi-mirror/      Python + FastAPI/uvicorn，pm2 进程 bangumi-mirror，端口 8000
+├── bangumi-mirror/      反代方案的文档与配置样例（程序本身在 ~/bgm-proxy）
+├── bgm-proxy/           Mirrox 配置与认证服务
+│   ├── config/config.toml   Mirrox 路由与改写（pm2: bgm-proxy，127.0.0.1:3001）
+│   └── auth/                认证服务（pm2: bgm-auth，127.0.0.1:3002）
+├── bin/mirrox           Mirrox 二进制（v0.3.3，外部下载，未纳入版本管理）
+├── certs/bgm.lockhart.ren/  通配证书（acme.sh 自动续期）
 ├── bin/                 跨项目的运维脚本
 │   └── check-nginx-config.py
 ├── backups/             数据库备份（由 backup-databases.py 写入）
@@ -101,6 +108,58 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ## 5. TLS 证书
 
+有**两套**证书体系，分别由不同工具管理：
+
+| 用途 | 覆盖域名 | 管理工具 | 位置 |
+|---|---|---|---|
+| 主证书 | `lockhart.ren` / `www.` / `ark.` / `blog.` | certbot（系统级） | `/etc/letsencrypt/live/lockhart.ren/` |
+| bgm 通配证书 | `bgm.lockhart.ren` + `*.bgm.lockhart.ren` | **acme.sh**（用户级） | `~/.acme.sh/` → 安装到 `~/certs/bgm.lockhart.ren/` |
+
+### bgm 通配证书为什么用 acme.sh 而不是 certbot
+
+通配证书只能走 **DNS-01 验证**。服务器**没有免密 sudo**，certbot 是系统级安装、
+加插件需要 sudo，因此改用装在 home 目录下的 acme.sh，完全不需要提权。
+
+```bash
+~/.acme.sh/acme.sh --list
+~/.acme.sh/acme.sh --renew -d bgm.lockhart.ren --ecc --force
+```
+
+DNS 凭据在 `~/.secrets/dnspod.env`（600 权限）。
+
+**关键细节**：`lockhart.ren` 的 DNS 托管在 **DNSPod（腾讯云）**，
+权威 NS 为 `writer.dnspod.net` / `stallion.dnspod.net`。
+
+- 必须用 acme.sh 的 **`dns_tencent`** 插件（腾讯云 API v3）。
+  实测 `dns_dp`（DNSPod 经典 API）**失败**。
+- 首次签发遇到过 `No TXT record found`：acme.sh 默认自查通过后立即让 CA 验证，
+  但 TXT 记录尚未传播到权威 NS。加 `--dnssleep 180` 即可。
+- 证书安装到 `~/certs/` **必须 chmod 644**（目录 755），因为 nginx 以 `www-data`
+  运行，读不到 `arknights` 家目录下的 700 路径。
+
+## 5.1 ⚠️ nginx 的默认站点陷阱
+
+`/etc/nginx/sites-enabled/` 里**只有 `arknights` 一个软链**，
+且**没有任何 server 块声明 `default_server`**。
+
+后果：**访问一个没有被任何 `server_name` 匹配的域名时，nginx 会落到配置里
+第一个 `listen 443` 的块** —— 当前是 `lockhart.ren` 的首页。
+
+表现是「打开某个链接却进了首页」，而不是报错或连不上。
+排查「站点串了」时先想到这条。
+
+（`sites-available/default` 里虽有 `listen 80 default_server`，但它没被启用。）
+
+## 5.2 nginx 版本相关的语法
+
+当前 **nginx 1.24.0**。
+
+- `http2 on;` 是 **1.25.1+** 语法，在 1.24 上会报 `unknown directive "http2"`。
+  必须写成 `listen 443 ssl http2;`。
+- `http_auth_request` 模块**已编译在内**，`auth_request` 可用。
+
+
+
 Let's Encrypt，证书在 `/etc/letsencrypt/live/lockhart.ren/`，四个域名共用一张
 （含 `www.lockhart.ren`）。由 `certbot.timer` 自动续期，**无需人工干预**。
 
@@ -117,7 +176,8 @@ sudo certbot renew --dry-run       # 演练续期
 | 数据库 | 保留份数 | 大小 |
 |---|---|---|
 | `arknights` | 30 | 约 7.5 KB |
-| `bangumi` | 10 | 约 41 MB |
+
+原先的 `bangumi` 库（117 MB）已随旧应用移除，脚本中的对应条目也已删除。
 
 调度：cron 每日 04:00，以及 `arknights-recruit/update.sh` 每次部署前。
 
@@ -154,8 +214,8 @@ curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:3000/
 | 天真做法 `cp data.db` | `integrity_check` 报 `ok`，但 `no such table: users` —— 空库 |
 | 从快照 gzip 恢复 | `integrity` ok、表结构齐全、`journal_mode=wal`、行数与线上一致 |
 
-**恢复 bangumi 库**同理，但需先 `pm2 stop bangumi-mirror`，且该库有 117 MB，
-解压留足磁盘空间（当前剩余约 48 G，充裕）。
+`bgm.lockhart.ren` 是纯反代，**没有数据库**，无需备份。
+需要备份的是 `~/bgm-proxy/`下的配置与密钥，详见该仓库的 `docs/ops/runbook.md`。
 
 ## 7. 推送代码到 GitHub
 
@@ -190,11 +250,13 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKJWOkPK25+IX/gnl5M5an8zg/1i29BRIZ3gQJ+GoDDg
 # 进程
 pm2 list
 pm2 describe arknights-recruit | grep -E 'status|restarts|uptime'
-pm2 describe bangumi-mirror    | grep -E 'status|restarts|uptime'
+pm2 describe bgm-proxy         | grep -E 'status|restarts|uptime'
+pm2 describe bgm-auth          | grep -E 'status|restarts|uptime'
 
 # 错误日志（正常应为 0 字节或无新增）
 tail -50 ~/.pm2/logs/arknights-recruit-error.log
-tail -50 ~/.pm2/logs/bangumi-mirror-error.log
+tail -50 ~/.pm2/logs/bgm-proxy-out.log
+tail -50 ~/.pm2/logs/bgm-auth-out.log
 
 # 备份是否每天成功
 tail -20 ~/backups/backup.log
@@ -206,7 +268,7 @@ df -h / ; free -h
 ss -tlnp | grep -E ':(80|443|3000|8000)\b'
 
 # 四个站点
-for u in https://lockhart.ren/ https://ark.lockhart.ren/ https://blog.lockhart.ren/ https://bangumi.lockhart.ren/; do
+for u in https://lockhart.ren/ https://ark.lockhart.ren/ https://blog.lockhart.ren/ https://bgm.lockhart.ren/; do
   printf '%-32s -> %s\n' "$u" "$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 $u)"
 done
 ```
@@ -232,3 +294,9 @@ done
 | `could not read Username for github.com` | 凭据缺少用户名段 | 改成 `https://x-access-token:<token>@github.com` |
 | `spawn EPERM`（本机） | 沙箱禁止管道 stdio | 改在服务器上执行 |
 | `git pull` 说已是最新但线上代码是旧的 | 服务器本地有未推送的提交 | `git log origin/main..HEAD` 查，并推送 |
+| `http2`/`unknown directive` | nginx 1.24 不支持 `http2 on;` | 改成 `listen 443 ssl http2;` |
+| 打开某域名却进了首页 | 无 `default_server`，落到第一个 443 块 | 见 5.1 节 |
+| 页面一直「加载中」、登录按钮没反应 | 浏览器自动请求的资源（如 `/favicon.ico`）被鉴权拦住，形成重定向循环 | 给这类资源加免鉴权规则（204） |
+| 表单提交后转一圈回原页、服务端日志里看不到该 POST | 表单 `action` 是相对路径，服务挂在 `/__auth/` 前缀下却生成了不带前缀的地址，被鉴权拦住 | 服务需知道自己被挂载的前缀，生成的链接必须带前缀 |
+| `pm2 restart` 后配置没生效 | pm2 复用启动时捕获的环境，不重新执行启动脚本 | 用 `pm2 delete` + `pm2 start` |
+| shell 脚本里 `source` 含 `$` 的值导致其被破坏 | bash 把值里的 `$x` 当变量引用展开 | 用 Python 逐行读取后交给 `env`，不让 shell 解析值 |
