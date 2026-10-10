@@ -145,7 +145,25 @@ else
   warn "公网健康检查返回 HTTP $PUBLIC_CODE，请确认"
 fi
 
-# ---------------------------------------------------------------- 9. Nginx
+# ---------------------------------------------------------------- 9a. Nginx 配置漂移检测
+# 只检测并告警，绝不自动覆盖。线上 /etc/nginx/sites-available/arknights 由 Certbot
+# 共同管理，盲覆盖会让 5 个域名 HTTPS 立即中断。
+NGINX_CHECK="$PROJECT_ROOT/scripts/check_nginx_config.py"
+if [ -f "$NGINX_CHECK" ]; then
+  log "检测 nginx 配置漂移"
+  if /usr/bin/python3 "$NGINX_CHECK"; then
+    ok "仓库 nginx.conf 与线上配置一致"
+  else
+    warn "仓库 nginx.conf 与线上配置不一致 —— 本次不会自动同步"
+    warn "线上配置由 Certbot 管理，盲覆盖会导致全部域名 HTTPS 中断"
+    warn "需要人工处理：先 sudoedit /etc/nginx/sites-available/arknights，"
+    warn "确认改动无误后执行：sudo nginx -t && sudo systemctl reload nginx"
+  fi
+else
+  warn "未找到 $NGINX_CHECK，跳过配置漂移检测"
+fi
+
+# ---------------------------------------------------------------- 9b. Nginx
 log "校验并重载 Nginx"
 if sudo -n nginx -t 2>/dev/null; then
   if sudo -n systemctl reload nginx; then
