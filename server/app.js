@@ -10,6 +10,15 @@ import operatorsRouter from './routes/operators.js';
 export function createApp() {
   const app = express();
 
+  // Nginx sits in front of Express on the same host and injects X-Forwarded-For.
+  // Without this, express-rate-limit cannot identify clients and falls back to
+  // req.ip == 127.0.0.1, making every visitor share ONE rate-limit bucket
+  // (20 auth requests per 15 min for the entire site). It also logs
+  // ERR_ERL_UNEXPECTED_X_FORWARDED_FOR on every request.
+  // 'loopback' trusts the header only when the peer is 127.0.0.1/::1, so it
+  // cannot be spoofed by external clients.
+  app.set('trust proxy', 'loopback');
+
   // Middleware
   app.use(helmet({
     // CSP disabled for SPA compatibility (Vite may inline scripts/styles)
