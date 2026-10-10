@@ -34,3 +34,11 @@ Thumbs.db
 
 # Development process records
 docs/
+
+# ...but the operations docs ARE versioned: they are the deployment/runbook
+# knowledge for this service and must travel with the repo.
+# Negating the directory itself (not just its contents) is required, otherwise
+# git never descends into docs/ and the rule below would have no effect.
+!docs/
+docs/*
+!docs/ops/
