@@ -92,6 +92,10 @@ log "安装后端依赖"
 ok "后端依赖就绪"
 
 # ---------------------------------------------------------------- 5. 前端构建
+# 先记录旧产物指纹，供第 9c 步判断本次构建是否真的产出了新内容。
+find client/dist/assets -type f -name '*.js' -exec sha256sum {} + 2>/dev/null \
+  | sha256sum | cut -d' ' -f1 > /tmp/dsh-arms-prev-fp || true
+
 log "构建前端（client）"
 ( cd client && npm install --silent && npx vite build --outDir dist.new --emptyOutDir )
 if [ -d client/dist ]; then
@@ -186,6 +190,21 @@ if sudo -n nginx -t 2>/dev/null; then
 else
   warn "无免密 sudo，跳过 Nginx 校验与重载（应用代码部署不受影响）"
   warn "仅在本次改动涉及 nginx 配置时才需要人工执行：sudo nginx -t && sudo systemctl reload nginx"
+fi
+
+# ---------------------------------------------------------------- 9c. 构建陈旧检测
+# 在第 5 步之前记录旧产物指纹，此处比对：若本次有代码改动却产出完全相同的
+# 产物，说明构建没真正生效（构建失败被吞、或产物未切换），而脚本仍会以 0 退出。
+PREV_FP="$(cat /tmp/dsh-arms-prev-fp 2>/dev/null || echo '')"
+CUR_FP="$(find client/dist/assets -type f -name '*.js' -exec sha256sum {} + 2>/dev/null | sha256sum | cut -d' ' -f1)"
+if [ -n "$PREV_FP" ] && [ "$PREV_FP" = "$CUR_FP" ]; then
+  if [ "$PREV_REV" != "$NEW_REV" ]; then
+    warn "产物指纹未变化，但代码从 $PREV_REV 变更为 $NEW_REV —— 构建可能未真正生效"
+  fi
+fi
+if [ -n "$CUR_FP" ]; then
+  printf '%s' "$CUR_FP" > /tmp/dsh-arms-prev-fp
+  ok "前端产物指纹 ${CUR_FP:0:12}"
 fi
 
 # ---------------------------------------------------------------- 10. 汇总
