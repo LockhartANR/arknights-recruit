@@ -38,7 +38,8 @@
 
 <script setup>
 import { ref, watch, onMounted, onUnmounted } from 'vue'
-import * as echarts from 'echarts'
+// 按需引入（饼图/tooltip/legend），替代整包 `import * as echarts from 'echarts'`
+import echarts from '../utils/echarts.js'
 
 const props = defineProps({
   year: { type: [String, Number], required: true },

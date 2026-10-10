@@ -163,6 +163,18 @@ else
   warn "未找到 $NGINX_CHECK，跳过配置漂移检测"
 fi
 
+# ---------------------------------------------------------------- 9a2. 未推送提交检测
+# 服务器上可能存在尚未推送到 GitHub 的本地提交。此时 `git pull` 会显示
+# "Already up to date."，看起来一切正常，但实际上线上代码不在远端 ——
+# 本机 clone 与 origin 都会落后，且无人察觉。故显式告警。
+UNPUSHED="$(git rev-list --count origin/main..HEAD 2>/dev/null || echo 0)"
+if [ "$UNPUSHED" -gt 0 ] 2>/dev/null; then
+  warn "有 $UNPUSHED 个提交尚未推送到 origin/main："
+  git --no-pager log --oneline "origin/main..HEAD" >&2 || true
+  warn "这些提交只存在于本机服务器，GitHub 与本机 clone 都还没有。"
+  warn "请在推送通道可用后执行：git push origin main"
+fi
+
 # ---------------------------------------------------------------- 9b. Nginx
 log "校验并重载 Nginx"
 if sudo -n nginx -t 2>/dev/null; then
