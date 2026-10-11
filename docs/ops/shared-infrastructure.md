@@ -22,6 +22,28 @@
 | 系统服务 | `pm2-arknights.service` 已 `enabled`，开机自动恢复 pm2 进程列表 |
 | 资源 | 磁盘 59G（用 16%）、内存 3.6G（可用约 2.6G）、负载极低 |
 
+## 1.1 项目代号
+
+五个项目各有中文代号，**日常沟通统一用它**，不再靠目录名或仓库名 ——
+`landing` 目录对应的却是 `my-landing` 仓库，这类不一致已经造成过混淆。
+
+**唯一归属地**：`.dsh-ops/names.env`（本地工作区）。查询：`python3 ~/bin/names.py [代号]`。
+
+| 代号 | slug | 是什么 | 服务器目录 | GitHub 仓库 |
+|---|---|---|---|---|
+| **公招** | `gongzhao` | 明日方舟公开招募统计 | `arknights-recruit` | `LockhartANR/arknights-recruit` |
+| **首页** | `shouye` | 个人首页 / 入口页 | `landing` | `LockhartANR/my-landing` |
+| **博客** | `boke` | 博客（Hexo） | `blog` | `LockhartANR/blog` |
+| **镜像** | `jingxiang` | Bangumi 私人反代镜像站 | `bangumi-mirror` | `LockhartANR/bangumi-mirror` |
+| **图鉴** | `tujian` | 干员数据源（仅本地） | `prts-fetcher` | `LockhartANR/PRTS-fetcher` |
+
+**为什么中文单字/双字**：对话里短、发音唯一、不需要额外记忆、能直接猜出是什么。
+**为什么留 ASCII slug**：bash/POSIX 变量名不允许非 ASCII，脚本需要它。
+
+**代号不进代码**：目录名、文件名、pm2 进程名、nginx `server_name` **一律保持现状** ——
+改这些收益远小于风险和改动量。代号只用于人读的地方（对话、文档、提交信息、巡检输出）。
+健康检查已按此改造，输出形如「镜像 (认证) -> HTTP 0」。
+
 ## 2. 域名与项目映射
 
 | 域名 | 内容 | 由谁托管 | 仓库 |
