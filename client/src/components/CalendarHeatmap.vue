@@ -114,11 +114,15 @@ const cellPx = computed(() => {
 })
 
 // 列宽与格子宽度必须来自同一个值，否则会变成长方形
+// 宽度与高度必须来自**同一个**值。
+// 之前宽度用算出来的 cellPx、高度用写死的 --hm-h(10px)，于是 13.2 x 10 ——
+// 这就是「长方形」的真因，与布局、flex 拉伸都无关。
+// 同时注入给周标签列用，否则它的行高（10px）与网格行（13.2px）会逐行错位。
 const gridStyle = computed(() => ({
   gridTemplateColumns: `repeat(${weeks.value}, ${cellPx.value}px)`,
-  gridTemplateRows: `repeat(7, var(--hm-h))`,
   '--hm-cell-w': `${cellPx.value}px`,
-  gap: `${gapPx.value}px`
+  '--hm-h': `${cellPx.value}px`,
+  '--hm-gap': `${gapPx.value}px`
 }))
 
 let ro = null

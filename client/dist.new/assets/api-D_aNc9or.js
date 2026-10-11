@@ -1,1 +1,0 @@
-import{r as e}from"./index-BB8Sx8Ld.js";async function t(t,n={}){let r=e(),i={...n.headers};r.token&&(i.Authorization=`Bearer ${r.token}`);let a=await fetch(t,{...n,headers:i});if(a.status===401)throw r.logout(),window.location.href=`/login`,Error(`未登录`);return a}export{t};
