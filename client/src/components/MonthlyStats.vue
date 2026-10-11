@@ -63,9 +63,9 @@ const STAR_COLORS = {
 
 function initChart() {
   if (!chartRef.value) return
-  // 容器还没有宽度时不要初始化：ECharts 会按 0 尺寸渲染，
-  // 结果是空白且**不会自动恢复**。交给 onMounted 里的 ResizeObserver
-  // 等到有尺寸时再调用。
+  // 容器没有宽度时不要初始化：ECharts 会按 0 尺寸渲染，
+  // 结果是空白且**不会自动恢复**。这种情况交给 watch(chartRef) 下次触发，
+  // 或 onMounted 里的 ResizeObserver 补救。
   if (chartRef.value.clientWidth === 0) return
   chart = echarts.init(chartRef.value)
   updateChart()
@@ -125,14 +125,27 @@ watch(() => props.stats, () => {
 // ResizeObserver 在容器真正拿到尺寸时才触发，因此是可靠的初始化时机。
 // 保留 nextTick(initChart) 作为兜底：万一环境没有 ResizeObserver，
 // 或容器尺寸早已确定不再变化，也能正常出图。
+// 关键：监听 chartRef 本身，而不是在 onMounted/nextTick 里等。
+//
+// 踩过的坑：容器在这个组件的 v-else-if="stats" 分支内。
+// 父组件挂载本组件时 stats 可能还没到，那块 DOM 没渲染，
+// 因此 onMounted 与 nextTick 时 chartRef 都是 null ——
+// 实测日志为 {hasRef: false}。此时无论怎么"等一个 tick"都拿不到元素。
+//
+// watch(chartRef) 在 ref 真正绑定到元素时触发，这才是可靠的初始化时机。
+// ResizeObserver 只用于后续尺寸变化（如窗口缩放、布局变化）。
+watch(chartRef, (el) => {
+  if (!el || chart) return
+  if (el.clientWidth === 0) return
+  initChart()
+})
+
 onMounted(() => {
-  nextTick(initChart)
   window.addEventListener('resize', handleResize)
 
   if (typeof ResizeObserver !== 'undefined' && chartRef.value) {
     observer = new ResizeObserver(() => {
       if (!chart) {
-        // 容器还是 0 尺寸时先不初始化，等下一次回调
         if (chartRef.value?.clientWidth > 0) initChart()
       } else {
         chart.resize()
