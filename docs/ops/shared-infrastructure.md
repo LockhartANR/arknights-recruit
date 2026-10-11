@@ -276,6 +276,39 @@ ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKJWOkPK25+IX/gnl5M5an8zg/1i29BRIZ3gQJ+GoDDg
 而且读到的是**实际对外服务的那张证书** —— 若证书换了但 nginx 没重载，
 读文件会误判正常，读连接才能发现。
 
+## 7.2 静态资源缓存策略
+
+各站点此前**完全没有 Cache-Control**，只有 nginx 默认给的 ETag / Last-Modified，
+浏览器每次访问都要回源校验一次（返回 304，那一次往返省不掉）。现已按文件是否带
+内容指纹区分处理：
+
+| 站点 | 路径 | 体积 | 策略 | 依据 |
+|---|---|---|---|---|
+| arknights-recruit | `/assets/` | 660 KB | `expires 1y` | Vite 产物，文件名带内容 hash，改名即换文件 |
+| arknights-recruit | `/operators/` | **18 MB**（432 张头像） | `expires 30d` | 按干员 id 命名、**不带 hash**，数据同步时同名文件内容会变，故不给长缓存 |
+| landing | `/assets/` | 67 KB | `expires 1y` | 同 Vite，带 hash |
+| bgm.lockhart.ren | — | — | 不动 | 上游 bgm.tv 自己就带缓存头（`/img/` 30 天、`/js/` 8 天），镜像透传即可 |
+| blog | — | 516 KB | **刻意不做** | Hexo 产物文件名**不带 hash**，长缓存会让读者长期看到旧 CSS/JS |
+
+**HTML 与 API 一律不加缓存头**：`index.html` 必须每次回源校验，否则前端更新后
+用户会拿着旧 index.html 去请求已删除的旧 hash 资源，直接白屏。
+
+### 一个实测结论：`expires` 自己就会生成 Cache-Control
+
+```nginx
+expires 1y;                                  # 生成 Cache-Control: max-age=31536000
+expires 1y;
+add_header Cache-Control "public, immutable"; # 多余的，会让响应出现两行 Cache-Control
+```
+
+用临时 nginx 实例实测确认：只用 `expires` 时 `Cache-Control` 出现 1 次，
+两者都写时出现 2 次（浏览器取较大值，功能等价但不整洁）。
+**另外：`immutable` 在 `max-age` 已达一年的情况下实际收益为零** ——
+浏览器本来就不会在一年内主动回源。所以最终只保留 `expires`。
+
+维护脚本：`~/bin/patch-cache-headers.py`（幂等，可重复运行），
+`~/bin/sync-nginx-to-repo.py`（把线上配置同步回仓库副本）。
+
 ## 8. 日常巡检
 
 ```bash
