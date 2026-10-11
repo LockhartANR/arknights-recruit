@@ -50,6 +50,7 @@ const props = defineProps({
 
 const chartRef = ref(null)
 let chart = null
+let observer = null
 
 const STAR_COLORS = {
   1: '#C8CDD4',
@@ -62,6 +63,10 @@ const STAR_COLORS = {
 
 function initChart() {
   if (!chartRef.value) return
+  // 容器还没有宽度时不要初始化：ECharts 会按 0 尺寸渲染，
+  // 结果是空白且**不会自动恢复**。交给 onMounted 里的 ResizeObserver
+  // 等到有尺寸时再调用。
+  if (chartRef.value.clientWidth === 0) return
   chart = echarts.init(chartRef.value)
   updateChart()
 }
@@ -111,19 +116,37 @@ watch(() => props.stats, () => {
   else updateChart()
 }, { deep: true })
 
+// 用尺寸驱动初始化，而不是只依赖 nextTick。
+//
+// 原因：ECharts 在容器宽度为 0 时会按 0 尺寸渲染，结果是**空白且不会自动恢复**。
+// 而容器何时拿到真实宽度取决于父级布局，nextTick 之后并不保证已经完成 ——
+// 实测现象是「首次进入有图，切换年/月后消失」。
+//
+// ResizeObserver 在容器真正拿到尺寸时才触发，因此是可靠的初始化时机。
+// 保留 nextTick(initChart) 作为兜底：万一环境没有 ResizeObserver，
+// 或容器尺寸早已确定不再变化，也能正常出图。
 onMounted(() => {
-  // 必须在这里初始化一次图表。
-  // 此前只注册了 resize 监听、没有 initChart()，导致一个问题：
-  // 父组件用 v-if="stats" 挂载本组件，也就是**数据到位后才挂载**。
-  // 挂载时数据已在 props 里，watch 不会再触发，
-  // 于是图表永远不初始化 —— 那块区域一直空白，
-  // 只有切换年/月让 props 变化时才画出来。
   nextTick(initChart)
   window.addEventListener('resize', handleResize)
+
+  if (typeof ResizeObserver !== 'undefined' && chartRef.value) {
+    observer = new ResizeObserver(() => {
+      if (!chart) {
+        // 容器还是 0 尺寸时先不初始化，等下一次回调
+        if (chartRef.value?.clientWidth > 0) initChart()
+      } else {
+        chart.resize()
+      }
+    })
+    observer.observe(chartRef.value)
+  }
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
+  observer?.disconnect()
+  observer = null
   chart?.dispose()
+  chart = null
 })
 </script>
