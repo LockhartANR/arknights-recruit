@@ -333,9 +333,17 @@ tr:hover td {
    格子尺寸用变量，网格列数由 JS 按年份算好后通过 gridTemplateColumns 注入。 */
 .hm-head { flex-wrap: wrap; gap: 8px; }
 
-.hm-scroll { overflow-x: auto; padding-bottom: 6px; }
-
-.hm-inner { display: flex; gap: 6px; min-width: max-content; padding-top: 4px; }
+/* 布局要点：这里绝不能用 width/min-width: max-content。
+   那会让 .hm-scroll 的宽度取决于网格内容，而网格列宽又取决于 .hm-scroll 的
+   测量宽度 —— 循环依赖，flex 会把网格拉长去填满容器，格子变成横长方形。
+   宽度必须单向：容器宽度 → 测量 → 算格子尺寸 → 注入列宽。 */
+.hm-scroll {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  padding-top: 4px;
+}
 
 .hm-weekdays {
   display: grid;
@@ -343,19 +351,19 @@ tr:hover td {
   gap: var(--hm-gap);
   /* 与 .hm-body 里月份标签那一行对齐 */
   margin-top: calc(var(--hm-month-h) + var(--hm-gap));
+  flex: none;
 }
 
 .hm-weekday {
   font-size: 9px;
   line-height: var(--hm-h);
   color: #8a9099;
-  width: 12px;
+  width: 14px;
   text-align: right;
 }
 
-.hm-body { display: flex; flex-direction: column; gap: var(--hm-gap); }
+.hm-body { flex: 1 1 auto; min-width: 0; }
 
-/* 月份标签与格子共用同一套列宽，因此天然同列对齐 */
 .hm-months {
   display: grid;
   height: var(--hm-month-h);
@@ -368,18 +376,11 @@ tr:hover td {
   align-self: end;
 }
 
-.hm-grid {
-  display: grid;
-  grid-auto-flow: column;
-  grid-template-rows: repeat(7, var(--hm-h));
-  gap: var(--hm-gap);
-}
+.hm-grid { display: grid; }
 
 .hm-cell {
-  /* 宽度与高度必须同源，否则会变成长方形。
-     之前写成 width:100% 是错的：.hm-inner 是 flex 容器且 min-width:max-content，
-     格子会被 flex 拉伸填满卡片宽度，而高度仍是固定行高。
-     flex:none + 显式宽度可同时挡住拉伸。 */
+  /* 宽度与高度必须同源，否则会变成非正方形。
+     两者都由组件注入的变量给出（见 CalendarHeatmap.vue 的 gridStyle）。 */
   width: var(--hm-cell-w, 10px);
   height: var(--hm-h);
   flex: none;
@@ -387,8 +388,7 @@ tr:hover td {
   background: #ebedf0;
 }
 
-/* 档位按真实数据分布定，不是 GitHub 的 2 的幂次：
-   本站单日次数集中在 4 与 8，用默认分档会出现整图一个颜色。 */
+/* 档位按真实数据分布定，不是 GitHub 的 2 的幂次 */
 .hm-lv-0 { background: #c6e0f5; }
 .hm-lv-1 { background: #8cc3ec; }
 .hm-lv-2 { background: #4a9fe0; }
@@ -397,6 +397,15 @@ tr:hover td {
 
 .hm-cell-blank { background: #ebedf0; }
 .hm-cell-out { background: transparent; }
+
+/* 图例色块：独立类名，避免与网格格子的 .hm-cell 规则互相干扰 */
+.hm-legend-cell {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 2px;
+  background: #ebedf0;
+}
 
 .hm-legend {
   display: flex;
