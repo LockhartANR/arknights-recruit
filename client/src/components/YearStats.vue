@@ -37,7 +37,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue'
 // 按需引入（饼图/tooltip/legend），替代整包 `import * as echarts from 'echarts'`
 import echarts from '../utils/echarts.js'
 
@@ -111,6 +111,13 @@ watch(() => props.stats, () => {
 }, { deep: true })
 
 onMounted(() => {
+  // 必须在这里初始化一次图表。
+  // 此前只注册了 resize 监听、没有 initChart()，导致一个问题：
+  // 父组件用 v-if="stats" 挂载本组件，也就是**数据到位后才挂载**。
+  // 挂载时数据已在 props 里，watch 不会再触发，
+  // 于是图表永远不初始化 —— 那块区域一直空白，
+  // 只有切换年/月让 props 变化时才画出来。
+  nextTick(initChart)
   window.addEventListener('resize', handleResize)
 })
 
