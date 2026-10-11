@@ -88,6 +88,45 @@ grep -o '获取趋势统计失败'      "$SP" | wc -l   # 期望 1
 根因是字符串替换的锚点写错：该文件 `return` 块结尾是 `}\n}`（**没有分号**），
 按 `};` 去匹配就静默失败了。**改这类文件后一定要回读确认改动真的落盘。**
 
+### 3. 图表在挂载时没初始化：又是「不报错、只空白」
+
+`YearStats.vue` / `MonthlyStats.vue` 的饼图代码一直都在，但**首次挂载时从不初始化**：
+
+```js
+watch(() => props.stats, () => { if (!chart) initChart(); ... })
+
+onMounted(() => {
+  window.addEventListener('resize', handleResize)   // 只加了监听
+})                                                   // 没有 initChart()
+```
+
+父组件用 `v-if="stats"` 挂载，即**数据到位后才挂载**。挂载时数据已在 props 里，
+`watch` 不会再触发 —— 图表永远不初始化，那块区域一直空白。
+只有切换年/月让 props 变化时才会画出来。
+
+修复：`onMounted` 里 `nextTick(initChart)`（等 DOM 就绪，ECharts 需要已挂载
+且有尺寸的容器，否则按 0 尺寸渲染）。
+
+**为什么 `TrendChart.vue` 没这个问题**：它从一开始就在 `onMounted` 里调了
+`initChart()`。这也解释了当时的现象 —— 趋势图正常、饼图空白。
+
+**规律**：凡是「图表/画布类」组件，`onMounted` 里必须有初始化调用。
+只靠 `watch(props)` 不够，因为组件常被 `v-if` 在数据到位后才挂载。
+
+### 4. 静态检查本身也会骗人
+
+验证修复时我用 `grep -o 'nextTick' 产物.js` 得到 0 次，一度以为没生效。
+实际是**压缩器把 `nextTick` 重命名成了 `i`**。
+
+所以检查产物要用**结构特征**而非符号名，例如搜 `addEventListener(`resize``
+再往前看它前面是否跟着初始化调用：
+
+```bash
+grep -oE '.{130}addEventListener\(`resize`.{60}' StatisticsPage-*.js
+# 期望看到 g(()=>{ i(u), window.addEventListener(`resize`,y) })
+#                     ↑ nextTick(initChart) 被重命名后的样子
+```
+
 ## 四、验证方式与边界
 
 后端可用直查 SQLite 与端点返回对账（脚本里用 `JWT_SECRET` 签个临时 token
