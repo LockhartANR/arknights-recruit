@@ -8,7 +8,7 @@
           v-for="(lv, i) in levels"
           :key="i"
           class="hm-cell"
-          :class="i === 0 ? 'hm-lv-0' : `hm-lv-${i}`"
+          :class="`hm-lv-${i}`"
         ></span>
         <span class="hm-legend-label">多</span>
       </div>
@@ -31,13 +31,13 @@
             >{{ m.month }}月</span>
           </div>
 
-          <div class="hm-grid" :style="gridStyle">
+          <div class="hm-grid" :style="gridStyle" @mouseleave="hide">
             <span
               v-for="(cell, i) in cells"
               :key="i"
               class="hm-cell"
               :class="cell.inYear ? (cell.level < 0 ? 'hm-cell-blank' : `hm-lv-${cell.level}`) : 'hm-cell-out'"
-              :title="cell.title"
+              @mouseenter="show(cell, $event)"
             ></span>
           </div>
         </div>
@@ -48,11 +48,22 @@
       有记录的 <strong>{{ activeDays }}</strong> 天，共 {{ totalCount }} 次；
       单日最多 <strong>{{ maxCount }}</strong> 次<template v-if="maxDate">（{{ maxDate }}）</template>
     </div>
+
+    <!--
+      自定义浮层，而不是格子的 title 属性。
+      原因：格子里只有 10px，原生提示要等约 1 秒、在这个尺寸上还常常不触发 ——
+      实测悬停什么都不显示。GitHub 自己用的也是自定义浮层。
+    -->
+    <div
+      v-if="tip.show"
+      class="hm-tip"
+      :style="{ left: tip.x + 'px', top: tip.y + 'px' }"
+    >{{ tip.text }}</div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, reactive } from 'vue'
 
 const props = defineProps({
   year: { type: [String, Number], required: true },
@@ -109,7 +120,7 @@ const cells = computed(() => {
   for (let i = 0; i < total; i++) {
     const d = new Date(start.value.getTime() + i * DAY)
     if (d.getUTCFullYear() !== y) {
-      out[i] = { inYear: false, level: -1, title: '' }
+      out[i] = { inYear: false, level: -1, date: '', count: 0, text: '' }
       continue
     }
     const key = ymd(d)
@@ -119,7 +130,13 @@ const cells = computed(() => {
       level = levels.findIndex(l => n <= l.max)
       if (level < 0) level = levels.length - 1
     }
-    out[i] = { inYear: true, level, title: `${key}　${n} 次` }
+    out[i] = {
+      inYear: true,
+      level,
+      date: key,
+      count: n,
+      text: n > 0 ? `${key}　${n} 次` : `${key}　无记录`
+    }
   }
   return out
 })
@@ -153,4 +170,21 @@ const maxEntry = computed(() => {
 })
 const maxCount = computed(() => maxEntry.value?.count ?? 0)
 const maxDate = computed(() => maxEntry.value?.date ?? '')
+
+// ---- 悬停提示 ----
+const tip = reactive({ show: false, x: 0, y: 0, text: '' })
+const TIP_OFFSET = 14
+
+function show(cell, ev) {
+  if (!cell.inYear) return
+  tip.text = cell.text
+  // 用视口坐标（fixed 定位），并在靠近上边缘时翻到下方，避免被裁掉
+  tip.x = ev.clientX + TIP_OFFSET
+  tip.y = ev.clientY < 60 ? ev.clientY + TIP_OFFSET : ev.clientY - 34
+  tip.show = true
+}
+
+function hide() {
+  tip.show = false
+}
 </script>

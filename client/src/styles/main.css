@@ -312,6 +312,21 @@ tr:hover td {
   gap: 8px;
 }
 
+/* 悬停浮层。用 fixed 定位跟随鼠标，而不是格子的 title 属性 ——
+   格子只有 10px，原生提示要等约 1 秒且常常不触发。 */
+.hm-tip {
+  position: fixed;
+  z-index: 100;
+  padding: 5px 9px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #fff;
+  background: rgba(26, 26, 46, 0.92);
+  border-radius: 5px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
 /* ---- 年度每日热力图（类 GitHub contribution） ----
    为什么不用 ECharts 的 calendar/heatmap：
    这是一张规则网格，CSS Grid 更简单、不增加图表库负担，也更容易控制配色与提示。
