@@ -127,6 +127,82 @@ grep -oE '.{130}addEventListener\(`resize`.{60}' StatisticsPage-*.js
 #                     ↑ nextTick(initChart) 被重命名后的样子
 ```
 
+### 5. 图表必须检测「容器元素被替换」——最隐蔽的一个
+
+这是本页所有坑里最难找的。现象很有迷惑性：
+
+| 切换 | 饼图 |
+|---|---|
+| 全年 → 某月 | 正常 |
+| 某月 → 全年 | 正常 |
+| **某月 → 另一月** | **消失** |
+| 刚刷新后看全年 | **也是空的**，切一下月份再回来才有 |
+
+**根因**：Vue 在数据变化时会重建 `v-else-if` 所在的元素。实测日志里的证据：
+
+```
+[d] stats watch {hasChart: true, hasRef: true, total: 1037, sameEl: false}
+[d] updateChart {hasChart: true, hasStats: true}
+[d] setOption 完成 {canvas: 0}
+```
+
+`sameEl: false` 说明 `.chart-box` 被换成了新元素。而代码只判断 `chart` 是否为空、
+**从不检查它绑的是不是当前那个元素**：
+
+1. 容器被重建 → `chart` 仍指向**已被丢弃的旧元素**（canvas 在旧元素里，不在页面上）
+2. `if (!chart)` 为假 → 走 `updateChart()` → `setOption()` 把数据画进**旧元素**
+3. 新容器永远得不到 canvas
+
+所以不是「图没画」，而是**画到了一个已经不在页面上的元素里**。
+
+**修法**：用元素身份检测，变了就销毁重建。三个入口统一走它：
+
+```js
+function ensureChart() {
+  if (!chartRef.value) return
+  if (chart && chartEl !== chartRef.value) {   // 容器换了
+    chart.dispose()
+    chart = null
+    chartEl = null
+  }
+  if (!chart) initChart()      // 在新容器上重建
+  else updateChart()
+}
+```
+
+调用点：`watch(() => props.stats)`、`watch(chartRef)`、`ResizeObserver` 回调。
+
+**通用结论**：任何把实例绑定到 DOM 元素的库（ECharts、Chart.js、地图、编辑器）
+都要做这个检查。只判「实例是否存在」不够 —— **实例存在但它绑的元素已被替换**，
+是这类 bug 的共同形态。
+
+### 6. 排查这类问题的正确顺序（我走了六轮弯路）
+
+这个 bug 我改了六次才对，前五次都是**在看不到渲染结果的情况下推测**：
+
+| 轮次 | 假设 | 结果 |
+|---|---|---|
+| 1 | 漏了 `onMounted` 初始化 | 补了，但元素那时还不存在 |
+| 2 | 容器宽度为 0 | 加了检查，同上 |
+| 3 | 月度数据没拿到 | **错**，日志证明 API 一直正常 |
+| 4 | `canvas: 0` 说明渲染失败 | **假信号**，下一帧就有 canvas |
+| 5 | 改用 `watch(chartRef)` | 对了一部分，未覆盖「容器被替换」 |
+| 6 | 容器身份变化未检测 | 真正根因 |
+
+**正确的顺序**：
+
+1. **先在每一步加日志**，而不是先改逻辑
+2. **让用户提供 DOM 证据**（`clientWidth`、`canvas` 数、`sameEl`），
+   这些是浏览器才能给出的、无法推测的事实
+3. 证据指向哪就改哪
+
+两个具体教训：
+
+- `echarts.init()` 之后**立刻**查 `querySelectorAll('canvas').length` 是 0，
+  下一帧才变 1。**别把这个瞬态当成失败信号** —— 我差点因此去改没坏的东西。
+- `watch(() => props.stats)` 默认在**渲染前**触发，那时 `chartRef` 还是 null，
+  实测日志为 `{hasRef: false}`。需要在渲染后跑就用 `{ flush: 'post' }`。
+
 ## 四、验证方式与边界
 
 后端可用直查 SQLite 与端点返回对账（脚本里用 `JWT_SECRET` 签个临时 token
