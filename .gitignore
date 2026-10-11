@@ -3,6 +3,11 @@ node_modules/
 
 # Build output
 dist/
+# update.sh 做原子切换时的中间目录：先把新产物构建到 dist.new，再 mv 成 dist。
+# 它们必须一并忽略 —— 否则某次在切换途中提交，就会把这批文件带进仓库，
+# 之后每次构建都留下一堆「已删除」状态（实测被误提交过 450 个文件）。
+dist.new/
+dist.prev/
 
 # Test artifacts
 test-results/
