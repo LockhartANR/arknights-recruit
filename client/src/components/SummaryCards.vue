@@ -80,12 +80,20 @@ function monthlyCards(s) {
     })
   }
 
-  if (s.topStar) {
+  // 星级用「平均星级 + 4★以上占比」两项，而不是「最常出」。
+  // 原因：3★ 长期占 72%~76%，「最常出」永远显示 3★，等于没有信息量。
+  // 实测各月平均星级的极差只有 0.11（3.22~3.33），所以再配一个
+  // 真正有波动幅度的指标：4★ 以上占比（各月 21.6%~31.5%）。
+  if (s.avgStar != null) {
+    out.push({ label: '平均星级', value: s.avgStar, hint: '按次数加权', tone: '' })
+  }
+
+  if (s.fourPlusPct != null) {
     out.push({
-      label: '最常出',
-      value: `${s.topStar}★`,
-      hint: `${s.topStarCount} 次`,
-      tone: `star-${s.topStar}`
+      label: '4★以上',
+      value: `${s.fourPlusPct}%`,
+      hint: `${s.fourPlusCount} 次`,
+      tone: ''
     })
   }
 

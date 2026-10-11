@@ -109,20 +109,22 @@ const summaryStats = computed(() => {
   const stats = monthlyStats.value
   if (!stats || !stats.breakdown) return null
 
-  let topStar = null
-  let topStarCount = 0
+  // 平均星级：按次数加权。它把 1~6★ 整条分布压成一个数，
+  // 直接回答「这个月整体出得高不高」。
+  let weighted = 0
+  let fourPlus = 0
   for (const b of stats.breakdown) {
-    if (b.count > topStarCount) {
-      topStarCount = b.count
-      topStar = b.star
-    }
+    weighted += b.star * b.count
+    if (b.star >= 4) fourPlus += b.count
   }
+  const total = stats.total || 0
 
   return {
-    yearTotal: stats.total,
+    yearTotal: total,
     totalDays: stats.totalDays || 0,
-    topStar: topStarCount > 0 ? topStar : null,
-    topStarCount
+    avgStar: total > 0 ? Math.round((weighted / total) * 100) / 100 : null,
+    fourPlusCount: fourPlus,
+    fourPlusPct: total > 0 ? Math.round((fourPlus / total) * 1000) / 10 : null
   }
 })
 
