@@ -402,22 +402,26 @@ tr:hover td {
 }
 
 /* 档位按真实数据分布定，不是 GitHub 的 2 的幂次 */
-.hm-lv-0 { background: #c6e0f5; }
-.hm-lv-1 { background: #8cc3ec; }
-.hm-lv-2 { background: #4a9fe0; }
-.hm-lv-3 { background: #2b7fc4; }
-.hm-lv-4 { background: #1f5e94; }
+/* 用 .hm-cell.hm-lv-N 两类组合，优先级必然高于任何单类规则，
+   因此不必再关心这些规则写在 .hm-cell / .hm-legend-cell 之前还是之后。 */
+.hm-cell.hm-lv-0, .hm-legend-cell.hm-lv-0 { background: #c6e0f5; }
+.hm-cell.hm-lv-1, .hm-legend-cell.hm-lv-1 { background: #8cc3ec; }
+.hm-cell.hm-lv-2, .hm-legend-cell.hm-lv-2 { background: #4a9fe0; }
+.hm-cell.hm-lv-3, .hm-legend-cell.hm-lv-3 { background: #2b7fc4; }
+.hm-cell.hm-lv-4, .hm-legend-cell.hm-lv-4 { background: #1f5e94; }
 
 .hm-cell-blank { background: #ebedf0; }
 .hm-cell-out { background: transparent; }
 
 /* 图例色块：独立类名，避免与网格格子的 .hm-cell 规则互相干扰 */
+/* 图例色块只给尺寸；背景色由 .hm-cell.hm-lv-N 给出。
+   此前这里写了 background:#ebedf0，且位置在档位色之后 —— 同为单类选择器、
+   优先级相同，后出现的胜出，于是五个色块全变成灰色。 */
 .hm-legend-cell {
   width: 10px;
   height: 10px;
   flex: none;
   border-radius: 2px;
-  background: #ebedf0;
 }
 
 .hm-legend {
