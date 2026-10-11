@@ -109,8 +109,11 @@ const gapPx = computed(() => (availWidth.value < 640 ? 2 : 3))
 const cellPx = computed(() => {
   const avail = availWidth.value
   if (!avail) return CELL_MAX
+  // 用精确小数、不做取整：取整会让网格总宽小于可用宽度而留下空白
+  // （实测 880px 容器下取整到 13.2 会空出 24.4px，表现为整块贴在左上角）。
+  // 宽屏若显得过大，由 .hm-scroll 的 max-width 约束，而不是这里截断。
   const raw = (avail - WEEKLBL - (weeks.value - 1) * gapPx.value) / weeks.value
-  return Math.max(CELL_MIN, Math.min(CELL_MAX, Math.floor(raw * 10) / 10))
+  return Math.max(CELL_MIN, raw)
 })
 
 // 列宽与格子宽度必须来自同一个值，否则会变成长方形
@@ -118,8 +121,11 @@ const cellPx = computed(() => {
 // 之前宽度用算出来的 cellPx、高度用写死的 --hm-h(10px)，于是 13.2 x 10 ——
 // 这就是「长方形」的真因，与布局、flex 拉伸都无关。
 // 同时注入给周标签列用，否则它的行高（10px）与网格行（13.2px）会逐行错位。
+// gap 直接给 px，不写成 gap: var(--hm-gap) —— 那是让元素引用自己在同一批
+// 内联样式里定义的自定义属性，属于自引用，不可靠（表现为间距消失）。
 const gridStyle = computed(() => ({
   gridTemplateColumns: `repeat(${weeks.value}, ${cellPx.value}px)`,
+  gap: `${gapPx.value}px`,
   '--hm-cell-w': `${cellPx.value}px`,
   '--hm-h': `${cellPx.value}px`,
   '--hm-gap': `${gapPx.value}px`
