@@ -13,6 +13,12 @@
 | 数据库 | `server/data.db`（WAL 模式） |
 | 静态产物 | `client/dist/`（由 nginx 直接托管） |
 
+## 相关文档
+
+| 文档 | 内容 |
+|---|---|
+| [`statistics-page.md`](statistics-page.md) | 统计页做了哪些功能、为什么排除其余方向（附数据依据）、ECharts 注册与「忘了导出」两个只在产物里能发现的坑 |
+
 ## 部署
 
 ```bash
