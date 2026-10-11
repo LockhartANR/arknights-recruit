@@ -203,6 +203,35 @@ function ensureChart() {
 - `watch(() => props.stats)` 默认在**渲染前**触发，那时 `chartRef` 还是 null，
   实测日志为 `{hasRef: false}`。需要在渲染后跑就用 `{ flush: 'post' }`。
 
+### 7. 测试时如何正确签一个 token（我在这里冤枉过应用一次）
+
+后端端点都要求 `Authorization: Bearer <JWT>`。临时签一个即可绕过登录做端到端调用，
+**但有个坑会让人误判成服务故障**：
+
+```bash
+# ✗ 错：dotenv v17 会往 stdout 打一行 "[dotenv@17] injecting env..."，
+#      被 $(...) 一起捕获，token 里混进文字与换行
+T=$(cd server && node -e "require('dotenv').config();     process.stdout.write(require('jsonwebtoken').sign({id:1}, process.env.JWT_SECRET))")
+# 症状：每个统计端点都返回 400 Bad Request、响应体为空、耗时不到 1 毫秒
+#       （Express 拒绝非法请求头），经 nginx 则是 curl 退出码 43 / HTTP 000
+```
+
+```bash
+# ✓ 对：显式关闭 dotenv 的输出
+T=$(cd server && DOTENV_CONFIG_QUIET=true node -e "
+  require('dotenv').config({ quiet: true });
+  process.stdout.write(require('jsonwebtoken').sign(
+    { id: 1, username: 'verify' }, process.env.JWT_SECRET, { expiresIn: '10m' }));
+")
+# 自检：JWT 应为 157 字符左右、恰好 2 个点号、不含任何空白字符
+printf 'len=%s dots=%s ws=%s\n' "${#T}" "$(printf '%s' "$T" | tr -cd '.' | wc -c)" \
+  "$(printf '%s' "$T" | grep -c '[[:space:]]')"
+```
+
+**教训**：`400 Bad Request` + 空响应体 + 亚毫秒耗时，说明请求**在到达路由前就被拒了**，
+这更像调用方的问题（非法请求头），而不是服务端逻辑错误。
+遇到这种组合先检查自己发出去的请求。
+
 ## 四、验证方式与边界
 
 后端可用直查 SQLite 与端点返回对账（脚本里用 `JWT_SECRET` 签个临时 token
