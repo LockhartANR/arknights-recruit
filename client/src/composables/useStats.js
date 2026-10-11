@@ -72,6 +72,7 @@ export function useStats() {
     error,
     fetchYears,
     fetchYearlyStats,
-    fetchMonthlyStats
+    fetchMonthlyStats,
+    fetchTrend
   }
 }
