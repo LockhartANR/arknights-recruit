@@ -130,8 +130,12 @@ const cellPx = computed(() => {
   return Math.max(CELL_MIN, Math.min(CELL_MAX, Math.floor(raw * 10) / 10))
 })
 
+// 列宽与格子宽度必须来自同一个值，否则会变成长方形。
+// 同时注入 --hm-cell-w 给 .hm-cell 用（见 main.css 里的说明）。
 const gridStyle = computed(() => ({
-  gridTemplateColumns: `repeat(${weeks.value}, ${cellPx.value}px)`
+  gridTemplateColumns: `repeat(${weeks.value}, ${cellPx.value}px)`,
+  '--hm-cell-w': `${cellPx.value}px`,
+  '--hm-gap': `${gapPx.value}px`
 }))
 
 let ro = null

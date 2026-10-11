@@ -376,8 +376,13 @@ tr:hover td {
 }
 
 .hm-cell {
-  width: 100%;
+  /* 宽度与高度必须同源，否则会变成长方形。
+     之前写成 width:100% 是错的：.hm-inner 是 flex 容器且 min-width:max-content，
+     格子会被 flex 拉伸填满卡片宽度，而高度仍是固定行高。
+     flex:none + 显式宽度可同时挡住拉伸。 */
+  width: var(--hm-cell-w, 10px);
   height: var(--hm-h);
+  flex: none;
   border-radius: 2px;
   background: #ebedf0;
 }
@@ -402,6 +407,7 @@ tr:hover td {
 /* 图例里的色块不在网格内，没有 1fr 可依赖，单独给固定宽度 */
 .hm-legend .hm-cell {
   width: 10px;
+  height: 10px;
   flex: none;
 }
 
