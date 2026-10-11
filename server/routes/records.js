@@ -295,6 +295,111 @@ router.get('/stats/years', (req, res) => {
   }
 });
 
+// GET /api/records/stats/trend?year=YYYY - 逐月趋势与年度汇总
+//
+// 为什么单独一个端点，而不是让前端调 12 次 /stats：
+//   * /stats 是「某年或某月」的聚合，要画全年趋势得发 12 个请求；
+//   * 一次分组查询就得到全部月份，交给 SQLite 算远快于 12 次往返。
+//
+// 返回 12 个月**全部补零**，前端因此不必处理缺月，
+// 也不会出现「只有有数据的月份才画柱子」导致时间轴被压缩的问题。
+//
+// 必须注册在 `/stats` 之前：Express 按注册顺序匹配，
+// 若 `/stats` 在前，`/stats/trend` 会先被它匹配掉。
+router.get('/stats/trend', (req, res) => {
+  try {
+    const { year } = req.query;
+    if (!year) {
+      return res.status(400).json({ error: '请提供年份参数' });
+    }
+
+    const rows = db.prepare(`
+      SELECT strftime('%m', created_at) AS month, stars, COUNT(*) AS cnt
+      FROM records
+      WHERE user_id = ? AND strftime('%Y', created_at) = ?
+      GROUP BY month, stars
+    `).all(req.user.id, year);
+
+    // 记录天数：同一天录入多条只算一天
+    const dayRows = db.prepare(`
+      SELECT strftime('%m', created_at) AS month,
+             COUNT(DISTINCT strftime('%Y-%m-%d', created_at)) AS days
+      FROM records
+      WHERE user_id = ? AND strftime('%Y', created_at) = ?
+      GROUP BY month
+    `).all(req.user.id, year);
+    const daysByMonth = {};
+    for (const row of dayRows) {
+      daysByMonth[parseInt(row.month)] = row.days;
+    }
+
+    // 按月份归集星级分布
+    const byMonth = {};
+    for (const row of rows) {
+      const m = parseInt(row.month);
+      if (!byMonth[m]) byMonth[m] = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 };
+      const star = parseInt(row.stars);
+      if (Object.prototype.hasOwnProperty.call(byMonth[m], star)) {
+        byMonth[m][star] = row.cnt;
+      }
+    }
+
+    const emptyStars = () => ({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 });
+    const months = [];
+    for (let m = 1; m <= 12; m++) {
+      const stars = byMonth[m] || emptyStars();
+      const total = Object.values(stars).reduce((a, b) => a + b, 0);
+      months.push({ month: m, total, stars, days: daysByMonth[m] || 0 });
+    }
+
+    const yearTotal = months.reduce((sum, m) => sum + m.total, 0);
+    const withData = months.filter(m => m.total > 0);
+    const activeMonths = withData.length;
+
+    // 汇总各月份的星级合计，用于找出「最常出的星级」
+    const starTotals = emptyStars();
+    for (const m of months) {
+      for (let s = 1; s <= 6; s++) starTotals[s] += m.stars[s];
+    }
+    let topStar = null;
+    let topStarCount = 0;
+    for (let s = 1; s <= 6; s++) {
+      if (starTotals[s] > topStarCount) {
+        topStarCount = starTotals[s];
+        topStar = s;
+      }
+    }
+
+    const peak = activeMonths
+      ? withData.reduce((a, b) => (b.total > a.total ? b : a))
+      : null;
+    const low = activeMonths
+      ? withData.reduce((a, b) => (b.total < a.total ? b : a))
+      : null;
+
+    res.json({
+      year: String(year),
+      total: yearTotal,
+      months,
+      summary: {
+        activeMonths,
+        yearTotal,
+        peak: peak ? { month: peak.month, total: peak.total } : null,
+        low: low ? { month: low.month, total: low.total } : null,
+        avgPerActiveMonth: activeMonths
+          ? Math.round((yearTotal / activeMonths) * 10) / 10
+          : 0,
+        totalDays: months.reduce((sum, m) => sum + m.days, 0),
+        topStar,
+        topStarCount
+      }
+    });
+  } catch (err) {
+    console.error('获取趋势统计失败:', err);
+    res.status(500).json({ error: '服务器错误' });
+  }
+});
+
 // GET /api/records/stats?year=YYYY[&month=MM] - get stats breakdown
 router.get('/stats', (req, res) => {
   try {
@@ -336,7 +441,20 @@ router.get('/stats', (req, res) => {
       percentage: total > 0 ? Math.round((starCounts[star] / total) * 1000) / 10 : 0
     }));
 
-    res.json({ total, breakdown });
+    // 记录天数：同一天录入多条只算一天。供前端月度概览使用。
+    const dayRow = month
+      ? db.prepare(`
+          SELECT COUNT(DISTINCT strftime('%Y-%m-%d', created_at)) AS days
+          FROM records
+          WHERE user_id = ? AND strftime('%Y', created_at) = ? AND strftime('%m', created_at) = ?
+        `).get(req.user.id, year, String(month).padStart(2, '0'))
+      : db.prepare(`
+          SELECT COUNT(DISTINCT strftime('%Y-%m-%d', created_at)) AS days
+          FROM records
+          WHERE user_id = ? AND strftime('%Y', created_at) = ?
+        `).get(req.user.id, year);
+
+    res.json({ total, breakdown, totalDays: dayRow ? dayRow.days : 0 });
   } catch (err) {
     res.status(500).json({ error: '服务器错误' });
   }

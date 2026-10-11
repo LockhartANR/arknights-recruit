@@ -4,6 +4,7 @@ import { api } from '../utils/api.js'
 export function useStats() {
   const yearlyStats = ref(null)
   const monthlyStats = ref(null)
+  const trend = ref(null)
   const availableYears = ref([])
   const loading = ref(false)
   const error = ref('')
@@ -47,9 +48,25 @@ export function useStats() {
     }
   }
 
+  async function fetchTrend(year) {
+    loading.value = true
+    error.value = ''
+    try {
+      const res = await api(`/api/records/stats/trend?year=${year}`)
+      if (!res.ok) throw new Error()
+      trend.value = await res.json()
+    } catch {
+      error.value = '获取趋势统计失败'
+      trend.value = null
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     yearlyStats,
     monthlyStats,
+    trend,
     availableYears,
     loading,
     error,
