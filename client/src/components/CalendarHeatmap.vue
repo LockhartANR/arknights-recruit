@@ -14,7 +14,7 @@
       </div>
     </div>
 
-    <div class="hm-scroll">
+    <div ref="scrollRef" class="hm-scroll">
       <div class="hm-inner">
         <div class="hm-weekdays">
           <span v-for="(wd, i) in WEEKDAYS" :key="i" class="hm-weekday">{{ wd }}</span>
@@ -63,7 +63,7 @@
 </template>
 
 <script setup>
-import { computed, reactive } from 'vue'
+import { computed, reactive, ref, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({
   year: { type: [String, Number], required: true },
@@ -73,7 +73,7 @@ const props = defineProps({
 
 // 分档刻意不用 GitHub 那套 1/2-3/4-7/8+。
 // 实测本站单日次数集中在 4 和 8（分别 81 天、43 天），
-// 若照搬那套分档，81 天会全落进同一档，整张图几乎一个颜色。
+// 若照搬那套分档，81 天会全部落进同一档，整张图几乎一个颜色。
 // 这里按真实分布的自然断点分档：1-4 / 5-7 / 8-11 / 12-19 / 20+。
 const levels = [
   { max: 4 },
@@ -86,6 +86,10 @@ const levels = [
 // 只标出周一、三、五、日：七行全标在 10px 行高下会挤成一团
 const WEEKDAYS = ['一', '', '三', '', '五', '', '日']
 const DAY = 86400000
+
+// 格子尺寸的上下限（px）。低于下限看不清，高于上限显得松散。
+const CELL_MIN = 6
+const CELL_MAX = 14
 
 function ymd(d) {
   return d.toISOString().slice(0, 10)
@@ -105,6 +109,45 @@ const weeks = computed(() => {
   const isLeap = new Date(Date.UTC(Number(props.year), 1, 29)).getUTCMonth() === 1
   const yearDays = isLeap ? 366 : 365
   return Math.ceil((dow + yearDays) / 7)
+})
+
+// ---- 自适应尺寸 ----
+//
+// 为什么要在 JS 里测量，而不是用 CSS calc + 100vw：
+// .main 有 max-width: 960px，宽屏时内容宽度被它限制，
+// 用视口宽度推导会算出与实际无关的结果（1920px 下会得出 31px 的格子）。
+// ResizeObserver 读到的才是真实可用宽度。
+const scrollRef = ref(null)
+const availWidth = ref(0)
+const gapPx = computed(() => (availWidth.value && availWidth.value < 640 ? 2 : 3))
+
+const cellPx = computed(() => {
+  const avail = availWidth.value
+  if (!avail) return CELL_MAX
+  // 减去周标签列与其间距（20px），剩下的是网格可用宽度
+  const grid = avail - 20
+  const raw = (grid - (weeks.value - 1) * gapPx.value) / weeks.value
+  return Math.max(CELL_MIN, Math.min(CELL_MAX, Math.floor(raw * 10) / 10))
+})
+
+const gridStyle = computed(() => ({
+  gridTemplateColumns: `repeat(${weeks.value}, ${cellPx.value}px)`
+}))
+
+let ro = null
+
+onMounted(() => {
+  if (typeof ResizeObserver === 'undefined' || !scrollRef.value) return
+  ro = new ResizeObserver(entries => {
+    for (const e of entries) availWidth.value = e.contentRect.width
+  })
+  ro.observe(scrollRef.value)
+  availWidth.value = scrollRef.value.clientWidth
+})
+
+onUnmounted(() => {
+  ro?.disconnect()
+  ro = null
 })
 
 const countByDate = computed(() => {
@@ -153,10 +196,6 @@ const monthLabels = computed(() => {
   }
   return out
 })
-
-const gridStyle = computed(() => ({
-  gridTemplateColumns: `repeat(${weeks.value}, var(--hm-cell))`
-}))
 
 const activeDays = computed(() => cells.value.filter(c => c.inYear && c.level >= 0).length)
 
