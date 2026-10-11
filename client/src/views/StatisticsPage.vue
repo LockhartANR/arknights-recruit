@@ -21,12 +21,12 @@
     </div>
 
     <template v-else>
-      <!-- 概览：把「总次数 / 最多最少的月份 / 最常出的星级 / 记录天数」一次说清 -->
       <SummaryCards
         v-if="summaryStats"
         :year="selectedYear"
         :month-label="selectedMonth"
         :stats="summaryStats"
+        :year-avg-per-active-month="yearAvgPerActiveMonth"
       />
 
       <!-- 趋势放在明细之前：先看整体走势，再落到具体数字 -->
@@ -84,45 +84,42 @@ const {
 const selectedYear = ref(null)
 const selectedMonth = ref(null)
 
-// 当前视图对应的一份 breakdown，供导出与概览复用
+// 当前视图对应的一份 breakdown，供导出复用
 const currentStats = computed(() =>
   selectedMonth.value ? monthlyStats.value : yearlyStats.value
 )
 
-// 概览数据。
-//
-// 全年视图直接用 /stats/trend 的 summary（后端已算好，含月均、记录天数）。
-// 月度视图后端没有等价汇总，这里从 breakdown 现算 —— 只有 6 个星级、一个月的量，
-// 成本可忽略，不值得为它再加一个端点。
+// 月度概览的「与月均相比」需要全年基线，它来自趋势端点的 summary。
+// 进过全年视图后 trend 就有值；若用户直接落在月度视图则可能为 null，
+// 此时少显示那两张卡，其余内容不受影响。
+const yearAvgPerActiveMonth = computed(
+  () => trend.value?.summary?.avgPerActiveMonth ?? null
+)
+
 const summaryStats = computed(() => {
   if (!selectedYear.value) return null
 
   if (!selectedMonth.value) {
+    // 年度：后端已算好，直接用
     return trend.value?.summary || null
   }
 
+  // 月度：/stats 只返回 breakdown，这里现算。
+  // 只有 6 个星级、一个月的量，不值得为它再加一个端点。
   const stats = monthlyStats.value
   if (!stats || !stats.breakdown) return null
 
   let topStar = null
   let topStarCount = 0
-  let lowCount = Infinity
   for (const b of stats.breakdown) {
     if (b.count > topStarCount) {
       topStarCount = b.count
       topStar = b.star
     }
-    if (b.count < lowCount) lowCount = b.count
   }
 
-  const hasAny = stats.total > 0
   return {
     yearTotal: stats.total,
-    // 选了具体月份，有数据就是 1 个「活跃月」；没数据则是 0
-    activeMonths: hasAny ? 1 : 0,
-    avgPerActiveMonth: stats.total,
-    peak: hasAny ? { month: selectedMonth.value, total: stats.total } : null,
-    low: null, // 单月没有「最少的月份」可言，交给组件按 activeMonths 判断不显示
     totalDays: stats.totalDays || 0,
     topStar: topStarCount > 0 ? topStar : null,
     topStarCount

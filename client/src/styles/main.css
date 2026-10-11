@@ -296,6 +296,9 @@ tr:hover td {
 }
 
 .summary-value.accent { color: #409EFF; }
+/* 与月均相比：高于记蓝、低于记灰，避免用红绿造成「好/坏」的暗示 */
+.summary-value.up { color: #409EFF; }
+.summary-value.down { color: #909399; }
 
 .summary-hint {
   font-size: 12px;
