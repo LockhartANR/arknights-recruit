@@ -311,3 +311,90 @@ tr:hover td {
   display: flex;
   gap: 8px;
 }
+
+/* ---- 年度每日热力图（类 GitHub contribution） ----
+   为什么不用 ECharts 的 calendar/heatmap：
+   这是一张规则网格，CSS Grid 更简单、不增加图表库负担，也更容易控制配色与提示。
+   格子尺寸用变量，网格列数由 JS 按年份算好后通过 gridTemplateColumns 注入。 */
+.hm-head { flex-wrap: wrap; gap: 8px; }
+
+.hm-scroll { overflow-x: auto; padding-bottom: 6px; }
+
+.hm-inner { display: flex; gap: 6px; min-width: max-content; padding-top: 4px; }
+
+.hm-weekdays {
+  display: grid;
+  grid-template-rows: repeat(7, var(--hm-cell));
+  gap: var(--hm-gap);
+  /* 与 .hm-body 里月份标签那一行对齐 */
+  margin-top: calc(var(--hm-month-h) + var(--hm-gap));
+}
+
+.hm-weekday {
+  font-size: 9px;
+  line-height: var(--hm-cell);
+  color: #8a9099;
+  width: 12px;
+  text-align: right;
+}
+
+.hm-body { display: flex; flex-direction: column; gap: var(--hm-gap); }
+
+/* 月份标签与格子共用同一套列宽，因此天然同列对齐 */
+.hm-months {
+  display: grid;
+  height: var(--hm-month-h);
+}
+
+.hm-month-label {
+  font-size: 10px;
+  color: #8a9099;
+  white-space: nowrap;
+  align-self: end;
+}
+
+.hm-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, var(--hm-cell));
+  gap: var(--hm-gap);
+}
+
+.hm-cell {
+  width: var(--hm-cell);
+  height: var(--hm-cell);
+  border-radius: 2px;
+  background: #ebedf0;
+}
+
+/* 档位按真实数据分布定，不是 GitHub 的 2 的幂次：
+   本站单日次数集中在 4 与 8，用默认分档会出现整图一个颜色。 */
+.hm-lv-0 { background: #c6e0f5; }
+.hm-lv-1 { background: #8cc3ec; }
+.hm-lv-2 { background: #4a9fe0; }
+.hm-lv-3 { background: #2b7fc4; }
+.hm-lv-4 { background: #1f5e94; }
+
+.hm-cell-blank { background: #ebedf0; }
+.hm-cell-out { background: transparent; }
+
+.hm-legend {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.hm-legend-label { font-size: 11px; color: #8a9099; margin: 0 3px; }
+
+.hm-summary { margin-top: 12px; font-size: 13px; }
+.hm-summary strong { color: #1a1a2e; }
+
+:root {
+  --hm-cell: 10px;
+  --hm-gap: 3px;
+  --hm-month-h: 14px;
+}
+
+@media (max-width: 640px) {
+  :root { --hm-cell: 9px; --hm-gap: 2px; }
+}

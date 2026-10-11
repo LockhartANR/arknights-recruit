@@ -29,12 +29,18 @@
         :year-avg-per-active-month="yearAvgPerActiveMonth"
       />
 
-      <!-- 趋势放在明细之前：先看整体走势，再落到具体数字 -->
+      <!-- 先看整体走势，再看每天落在哪些日子，最后落到星级明细 -->
       <TrendChart
         v-if="!selectedMonth && trend"
         :year="selectedYear"
         :trend="trend"
         :loading="loading"
+      />
+
+      <CalendarHeatmap
+        v-if="!selectedMonth && trend"
+        :year="selectedYear"
+        :trend="trend"
       />
 
       <MonthlyStats
@@ -68,6 +74,7 @@ import YearStats from '../components/YearStats.vue'
 import MonthlyStats from '../components/MonthlyStats.vue'
 import SummaryCards from '../components/SummaryCards.vue'
 import TrendChart from '../components/TrendChart.vue'
+import CalendarHeatmap from '../components/CalendarHeatmap.vue'
 
 const {
   yearlyStats,

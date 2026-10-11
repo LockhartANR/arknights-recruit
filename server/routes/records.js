@@ -377,10 +377,23 @@ router.get('/stats/trend', (req, res) => {
       ? withData.reduce((a, b) => (b.total < a.total ? b : a))
       : null;
 
+    // 逐日计数：供年度概览的日历热力图使用。
+    // 与 months 一起返回而不是单独开端点 —— 热力图与趋势图总是同屏出现
+    // （都在全年视图），分两个请求没有意义。
+    // 只返回有记录的日子，前端按年份补零；一年 365 个 count:0 传过去太浪费。
+    const dayList = db.prepare(`
+      SELECT date(created_at) AS day, COUNT(*) AS cnt
+      FROM records
+      WHERE user_id = ? AND strftime('%Y', created_at) = ?
+      GROUP BY day
+      ORDER BY day
+    `).all(req.user.id, year);
+
     res.json({
       year: String(year),
       total: yearTotal,
       months,
+      days: dayList.map(r => ({ date: r.day, count: r.cnt })),
       summary: {
         activeMonths,
         yearTotal,
