@@ -1,0 +1,459 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+    'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Arial, sans-serif;
+  background: #f0f2f5;
+  color: #333;
+  min-height: 100vh;
+}
+
+.main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+/* Card */
+.card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  margin-bottom: 20px;
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: #1a1a2e;
+}
+
+/* Form */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #555;
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  font-size: 15px;
+  transition: border-color 0.2s;
+  outline: none;
+  font-family: inherit;
+}
+
+.form-input:focus {
+  border-color: #409EFF;
+  box-shadow: 0 0 0 2px rgba(64,158,255,0.15);
+}
+
+.form-input::placeholder {
+  color: #bbb;
+}
+
+.form-error {
+  color: #f56c6c;
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 20px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  touch-action: manipulation;
+}
+
+.btn-primary {
+  background: #409EFF;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #3a8ee6;
+}
+
+.btn-danger {
+  background: #f56c6c;
+  color: #fff;
+}
+
+.btn-danger:hover {
+  background: #e04545;
+}
+
+.btn-sm {
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
+.btn-default {
+  background: #f5f5f5;
+  color: #333;
+  border: 1px solid #d9d9d9;
+}
+
+.btn-default:hover {
+  background: #e8e8e8;
+}
+
+/* Table */
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+th, td {
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+th {
+  background: #fafafa;
+  font-weight: 600;
+  color: #555;
+}
+
+tr:hover td {
+  background: #fafafa;
+}
+
+/* Select */
+.select {
+  padding: 6px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  background: #fff;
+  cursor: pointer;
+}
+
+.select:focus {
+  border-color: #409EFF;
+}
+
+/* Utility */
+.flex-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mt-16 { margin-top: 16px; }
+.mb-8 { margin-bottom: 8px; }
+
+.text-muted {
+  color: #999;
+  text-align: center;
+  padding: 40px 0;
+}
+
+/* Star colors */
+.star-1 { color: #b0b0b0; }
+.star-2 { color: #67c23a; }
+.star-3 { color: #909399; }
+.star-4 { color: #409EFF; }
+.star-5 { color: #E6A23C; }
+.star-6 { color: #F56C6C; }
+
+/* Chart container */
+.chart-box {
+  width: 100%;
+  height: 360px;
+}
+
+/* Hamburger hidden on desktop */
+.hamburger {
+  display: none;
+}
+
+/* Stats grid: side-by-side on wide screens */
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .main {
+    padding: 16px 12px;
+  }
+
+  .card {
+    padding: 16px;
+    border-radius: 8px;
+  }
+
+  .card-title {
+    font-size: 16px;
+  }
+
+  .chart-box {
+    height: 260px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-value {
+    font-size: 18px;
+  }
+
+  .flex-row {
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    padding: 6px 14px;
+    font-size: 13px;
+  }
+
+  table {
+    font-size: 13px;
+  }
+
+  th, td {
+    padding: 8px 10px;
+  }
+
+  /* NavBar mobile — global (override scoped specificity) */
+  .navbar-links,
+  .navbar-user {
+    display: none !important;
+  }
+  .hamburger {
+    display: flex;
+  }
+}
+
+/* ---- 统计页概览卡片 ---- */
+/* auto-fit + minmax：窄屏自动换行，宽屏自动铺满，不必写多组媒体查询 */
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
+  gap: 12px;
+}
+
+.summary-item {
+  padding: 12px 14px;
+  background: #f7f8fa;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.summary-label {
+  font-size: 12px;
+  color: #8a9099;
+  margin-bottom: 6px;
+}
+
+.summary-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a2e;
+  line-height: 1.3;
+}
+
+.summary-value.accent { color: #409EFF; }
+/* 与月均相比：高于记蓝、低于记灰，避免用红绿造成「好/坏」的暗示 */
+.summary-value.up { color: #409EFF; }
+.summary-value.down { color: #909399; }
+
+.summary-hint {
+  font-size: 12px;
+  color: #8a9099;
+  margin-top: 4px;
+}
+
+/* ---- 趋势图模式切换 ---- */
+.trend-toggle {
+  display: flex;
+  gap: 8px;
+}
+
+/* 悬停浮层。用 fixed 定位跟随鼠标，而不是格子的 title 属性 ——
+   格子只有 10px，原生提示要等约 1 秒且常常不触发。 */
+.hm-tip {
+  position: fixed;
+  z-index: 100;
+  padding: 5px 9px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #fff;
+  background: rgba(26, 26, 46, 0.92);
+  border-radius: 5px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ---- 年度每日热力图（类 GitHub contribution） ----
+   为什么不用 ECharts 的 calendar/heatmap：
+   这是一张规则网格，CSS Grid 更简单、不增加图表库负担，也更容易控制配色与提示。
+   格子尺寸用变量，网格列数由 JS 按年份算好后通过 gridTemplateColumns 注入。 */
+.hm-head { flex-wrap: wrap; gap: 8px; }
+
+/* 布局要点：这里绝不能用 width/min-width: max-content。
+   那会让 .hm-scroll 的宽度取决于网格内容，而网格列宽又取决于 .hm-scroll 的
+   测量宽度 —— 循环依赖，flex 会把网格拉长去填满容器，格子变成横长方形。
+   宽度必须单向：容器宽度 → 测量 → 算格子尺寸 → 注入列宽。 */
+.hm-scroll {
+  display: flex;
+  gap: 6px;
+  /* 居中：格子尺寸与容器宽度不可能永远精确相等，差一点时居中而不是贴左上角。
+     同时限制最大宽度 —— 宽屏下限制的是整块热力图，而不是单个格子，
+     这样既不会留白也不会让格子大到松散。 */
+  justify-content: center;
+  max-width: 900px;
+  overflow-x: auto;
+  /* 固定预留滚动条槽位：否则滚动条出现/消失会改变测量宽度，
+     进而改变格子尺寸，可能来回抖动 */
+  scrollbar-gutter: stable;
+  padding-bottom: 6px;
+  padding-top: 4px;
+}
+
+.hm-weekdays {
+  display: grid;
+  grid-template-rows: repeat(7, var(--hm-h));
+  gap: var(--hm-gap);
+  /* 与 .hm-body 里月份标签那一行对齐 */
+  margin-top: calc(14px + var(--hm-gap));
+  flex: none;
+}
+
+.hm-weekday {
+  font-size: 9px;
+  line-height: var(--hm-h);
+  color: #8a9099;
+  width: 14px;
+  text-align: right;
+}
+
+.hm-body { flex: 1 1 auto; min-width: 0; }
+
+.hm-months {
+  display: grid;
+  /* 固定高度，刻意不跟随格子尺寸：它若随格子变化，会与 .hm-scroll 的
+     测量宽度形成循环（宽度→格子→月份高度→滚动条→宽度）。 */
+  height: 14px;
+}
+
+.hm-month-label {
+  font-size: 10px;
+  color: #8a9099;
+  white-space: nowrap;
+  align-self: end;
+}
+
+.hm-grid {
+  display: grid;
+  grid-template-rows: repeat(7, var(--hm-h));
+}
+
+.hm-cell {
+  /* 宽度与高度必须同源，否则会变成非正方形。
+     两者都由组件注入的变量给出（见 CalendarHeatmap.vue 的 gridStyle）。 */
+  width: var(--hm-cell-w, 10px);
+  height: var(--hm-h);
+  flex: none;
+  border-radius: 2px;
+  background: #ebedf0;
+}
+
+/* 档位按真实数据分布定，不是 GitHub 的 2 的幂次 */
+/* 用 .hm-cell.hm-lv-N 两类组合，优先级必然高于任何单类规则，
+   因此不必再关心这些规则写在 .hm-cell / .hm-legend-cell 之前还是之后。 */
+.hm-cell.hm-lv-0, .hm-legend-cell.hm-lv-0 { background: #c6e0f5; }
+.hm-cell.hm-lv-1, .hm-legend-cell.hm-lv-1 { background: #8cc3ec; }
+.hm-cell.hm-lv-2, .hm-legend-cell.hm-lv-2 { background: #4a9fe0; }
+.hm-cell.hm-lv-3, .hm-legend-cell.hm-lv-3 { background: #2b7fc4; }
+.hm-cell.hm-lv-4, .hm-legend-cell.hm-lv-4 { background: #1f5e94; }
+
+.hm-cell-blank { background: #ebedf0; }
+.hm-cell-out { background: transparent; }
+
+/* 图例色块：独立类名，避免与网格格子的 .hm-cell 规则互相干扰 */
+/* 图例色块只给尺寸；背景色由 .hm-cell.hm-lv-N 给出。
+   此前这里写了 background:#ebedf0，且位置在档位色之后 —— 同为单类选择器、
+   优先级相同，后出现的胜出，于是五个色块全变成灰色。 */
+.hm-legend-cell {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 2px;
+}
+
+.hm-legend {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+/* 图例里的色块不在网格内，没有 1fr 可依赖，单独给固定宽度 */
+.hm-legend .hm-cell {
+  width: 10px;
+  height: 10px;
+  flex: none;
+}
+
+.hm-legend-label { font-size: 11px; color: #8a9099; margin: 0 3px; }
+
+.hm-summary { margin-top: 12px; font-size: 13px; }
+.hm-summary strong { color: #1a1a2e; }
+
+/* 热力图尺寸常量。
+   格子宽度**不由 CSS 推导**：.main 有 max-width: 960px，宽屏上内容宽度被它限制，
+   用 100vw 算出来的格子宽度与真实可用宽度无关（我试过，宽屏会算出 31px）。
+   改由组件测量容器实际宽度后注入 gridTemplateColumns —— 见 CalendarHeatmap.vue。 */
+:root {
+  --hm-gap: 3px;
+  --hm-h: 10px;
+}
+
+@media (max-width: 640px) {
+  :root {
+    --hm-gap: 2px;
+    --hm-h: 9px;
+  }
+}
